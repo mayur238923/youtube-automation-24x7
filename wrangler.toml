@@ -1,0 +1,15 @@
+name = "youtube-automation-24x7"
+main = "worker.js"
+compatibility_date = "2024-10-01"
+
+[triggers]
+crons = [
+  "* * * * *"        # Every minute for scheduling and keep-alive
+]
+
+# Environment variables - Set these in Cloudflare dashboard:
+# RENDER_BOT_URL=https://your-app.onrender.com
+# TELEGRAM_BOT_TOKEN=your_telegram_token
+# TELEGRAM_CHAT_ID=your_chat_id
+# YOUTUBE_API_KEY=your_youtube_api_key
+# GROQ_API_KEY=your_groq_api_key
