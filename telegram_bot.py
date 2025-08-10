@@ -1,255 +1,213 @@
 #!/usr/bin/env python3
 """
-Complete Setup Verification Script
-Checks if everything is ready for deployment
+Telegram Bot for YouTube Automation Control
+24/7 running with commands and notifications
 """
 
 import os
-import requests
-import json
+import time
+import threading
+from datetime import datetime
 from dotenv import load_dotenv
+import requests
+from youtube_bot import YouTubeBot
 
 load_dotenv()
 
-def check_environment_variables():
-    """Check if all required environment variables are set"""
-    print("🔍 Checking Environment Variables...")
-    
-    required_vars = [
-        'YOUTUBE_API_KEY',
-        'YOUTUBE_CLIENT_ID', 
-        'YOUTUBE_CLIENT_SECRET',
-        'GROQ_API_KEY',
-        'TELEGRAM_BOT_TOKEN',
-        'TELEGRAM_CHAT_ID'
-    ]
-    
-    missing_vars = []
-    
-    for var in required_vars:
-        value = os.getenv(var)
-        if not value:
-            missing_vars.append(var)
-            print(f"❌ {var}: Missing")
-        else:
-            print(f"✅ {var}: Set ({value[:10]}...)")
-    
-    if missing_vars:
-        print(f"\n⚠️ Missing variables: {', '.join(missing_vars)}")
-        return False
-    
-    print("✅ All environment variables are set!")
-    return True
-
-def test_youtube_api():
-    """Test YouTube API connection"""
-    print("\n🔍 Testing YouTube API...")
-    
-    api_key = os.getenv('YOUTUBE_API_KEY')
-    if not api_key:
-        print("❌ YouTube API key not found")
-        return False
-    
-    try:
-        url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&maxResults=1&key={api_key}"
-        response = requests.get(url, timeout=10)
+class TelegramYouTubeBot:
+    def __init__(self):
+        self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        self.telegram_chat_id = os.getenv('TELEGRAM_CHAT_ID')
+        self.youtube_bot = YouTubeBot()
+        self.is_running = False
+        self.last_update_id = 0
         
-        if response.status_code == 200:
-            print("✅ YouTube API working!")
-            return True
-        else:
-            print(f"❌ YouTube API error: {response.status_code}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ YouTube API test failed: {e}")
-        return False
-
-def test_groq_api():
-    """Test Groq API connection"""
-    print("\n🔍 Testing Groq API...")
+        print("🤖 Telegram YouTube Bot Initialized!")
+        print(f"📱 Bot Token: {self.telegram_token[:10]}...")
+        print(f"💬 Chat ID: {self.telegram_chat_id}")
     
-    api_key = os.getenv('GROQ_API_KEY')
-    if not api_key:
-        print("❌ Groq API key not found")
-        return False
-    
-    try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "mixtral-8x7b-32768",
-            "messages": [{"role": "user", "content": "Hello"}],
-            "max_tokens": 10
-        }
-        
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        
-        if response.status_code == 200:
-            print("✅ Groq API working!")
-            return True
-        else:
-            print(f"❌ Groq API error: {response.status_code}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Groq API test failed: {e}")
-        return False
-
-def test_telegram_bot():
-    """Test Telegram bot connection"""
-    print("\n🔍 Testing Telegram Bot...")
-    
-    token = os.getenv('TELEGRAM_BOT_TOKEN')
-    chat_id = os.getenv('TELEGRAM_CHAT_ID')
-    
-    if not token or not chat_id:
-        print("❌ Telegram credentials not found")
-        return False
-    
-    try:
-        url = f"https://api.telegram.org/bot{token}/getMe"
-        response = requests.get(url, timeout=10)
-        
-        if response.status_code == 200:
-            bot_info = response.json()
-            bot_name = bot_info['result']['username']
-            print(f"✅ Telegram bot working! (@{bot_name})")
-            
-            # Test sending message
-            test_url = f"https://api.telegram.org/bot{token}/sendMessage"
-            test_data = {
-                'chat_id': chat_id,
-                'text': '🧪 Setup Test: Bot is working!',
+    def send_message(self, message):
+        """Send message to Telegram"""
+        try:
+            url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
+            data = {
+                'chat_id': self.telegram_chat_id,
+                'text': message,
                 'parse_mode': 'HTML'
             }
-            
-            test_response = requests.post(test_url, data=test_data, timeout=10)
-            if test_response.status_code == 200:
-                print("✅ Test message sent successfully!")
-                return True
-            else:
-                print("⚠️ Bot works but couldn't send test message")
-                return False
-        else:
-            print(f"❌ Telegram bot error: {response.status_code}")
+            response = requests.post(url, data=data)
+            return response.status_code == 200
+        except Exception as e:
+            print(f"❌ Telegram error: {e}")
             return False
+    
+    def get_updates(self):
+        """Get updates from Telegram"""
+        try:
+            url = f"https://api.telegram.org/bot{self.telegram_token}/getUpdates"
+            params = {'offset': self.last_update_id + 1, 'timeout': 30}
+            response = requests.get(url, params=params)
             
-    except Exception as e:
-        print(f"❌ Telegram test failed: {e}")
-        return False
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('result', [])
+            return []
+        except Exception as e:
+            print(f"❌ Get updates error: {e}")
+            return []
+    
+    def handle_command(self, message):
+        """Handle Telegram commands"""
+        text = message.get('text', '').lower().strip()
+        chat_id = message['chat']['id']
+        
+        # Store chat ID if not set
+        if not self.telegram_chat_id:
+            self.telegram_chat_id = str(chat_id)
+        
+        if text == '/start' or text == 'start':
+            if not self.is_running:
+                self.is_running = True
+                welcome_msg = """
+🚀 <b>YouTube Automation STARTED!</b>
 
-def check_required_files():
-    """Check if all required files exist"""
-    print("\n🔍 Checking Required Files...")
-    
-    required_files = [
-        'render_bot.py',
-        'youtube_bot.py',
-        'requirements.txt',
-        'render.yaml',
-        'Procfile',
-        'cloudflare_worker_scheduler.js',
-        'wrangler.toml',
-        '.env'
-    ]
-    
-    missing_files = []
-    
-    for file in required_files:
-        if os.path.exists(file):
-            print(f"✅ {file}: Found")
+📋 <b>Available Commands:</b>
+• <b>start</b> - Start automation
+• <b>stop</b> - Stop automation  
+• <b>status</b> - Current status
+• <b>logs</b> - Recent uploads
+• <b>upload tech</b> - Upload tech video now
+• <b>upload entertainment</b> - Upload entertainment video
+
+🤖 <b>Bot is now running 24/7!</b>
+You'll get notifications for every upload.
+"""
+                self.send_message(welcome_msg)
+            else:
+                self.send_message("✅ <b>Automation is already running!</b>")
+            
+        elif text == '/status' or text == 'status':
+            total = self.youtube_bot.daily_tech_uploads + self.youtube_bot.daily_entertainment_uploads
+            status_msg = f"""
+📊 <b>Current Status:</b>
+
+🔧 <b>Tech:</b> {self.youtube_bot.daily_tech_uploads}/5
+🎬 <b>Entertainment:</b> {self.youtube_bot.daily_entertainment_uploads}/5
+📈 <b>Total Today:</b> {total}/10
+
+🤖 <b>Bot Status:</b> {'🟢 Running' if self.is_running else '🔴 Stopped'}
+⏰ <b>Time:</b> {datetime.now().strftime('%H:%M:%S')}
+📋 <b>Processed Videos:</b> {len(self.youtube_bot.processed_videos)}
+"""
+            self.send_message(status_msg)
+            
+        elif text == '/upload_tech' or text == 'upload tech':
+            self.send_message("🔧 <b>Processing Tech Video...</b>")
+            success = self.youtube_bot.process_tech_video()
+            if success:
+                self.send_message("✅ <b>Tech video uploaded successfully!</b>")
+            else:
+                self.send_message("❌ <b>Tech video upload failed!</b>")
+                
+        elif text == '/upload_entertainment' or text == 'upload entertainment':
+            self.send_message("🎬 <b>Processing Entertainment Video...</b>")
+            success = self.youtube_bot.process_entertainment_video()
+            if success:
+                self.send_message("✅ <b>Entertainment video uploaded successfully!</b>")
+            else:
+                self.send_message("❌ <b>Entertainment video upload failed!</b>")
+                
+        elif text == '/logs' or text == 'logs':
+            try:
+                with open('upload_log.txt', 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    recent_logs = lines[-5:]  # Last 5 uploads
+                    
+                logs_msg = "<b>📋 Recent Uploads:</b>\n\n"
+                for line in recent_logs:
+                    logs_msg += f"• {line.strip()}\n"
+                    
+                self.send_message(logs_msg)
+            except:
+                self.send_message("❌ <b>No logs found!</b>")
+                
+        elif text == '/stop' or text == 'stop':
+            if self.is_running:
+                self.is_running = False
+                self.send_message("⏸️ <b>Automation STOPPED!</b>")
+            else:
+                self.send_message("⏸️ <b>Automation is already stopped!</b>")
+            
+        elif text == '/resume' or text == 'resume':
+            if not self.is_running:
+                self.is_running = True
+                self.send_message("▶️ <b>Automation RESUMED!</b>")
+            else:
+                self.send_message("▶️ <b>Automation is already running!</b>")
+            
+        elif text == '/help' or text == 'help':
+            help_msg = """
+🤖 <b>YouTube Automation Bot Help</b>
+
+<b>Simple Commands:</b>
+• <b>start</b> - Start automation
+• <b>stop</b> - Stop automation  
+• <b>status</b> - Check progress
+• <b>logs</b> - View recent uploads
+• <b>upload tech</b> - Manual tech upload
+• <b>upload entertainment</b> - Manual entertainment upload
+
+<b>Features:</b>
+• 24/7 automated uploads
+• 5 Tech + 5 Entertainment daily
+• Smart video processing
+• Duplicate prevention
+• Real-time notifications
+
+<b>Schedule:</b>
+Tech: 08:00, 12:00, 16:00, 20:00, 23:00
+Entertainment: 10:00, 14:00, 18:00, 21:00, 23:30
+"""
+            self.send_message(help_msg)
         else:
-            missing_files.append(file)
-            print(f"❌ {file}: Missing")
+            self.send_message("❓ <b>Unknown command!</b>\n\nSimple commands:\n• <b>start</b> - Start automation\n• <b>stop</b> - Stop automation\n• <b>status</b> - Check status")
     
-    if missing_files:
-        print(f"\n⚠️ Missing files: {', '.join(missing_files)}")
-        return False
-    
-    print("✅ All required files are present!")
-    return True
-
-def generate_deployment_urls():
-    """Generate deployment URLs and commands"""
-    print("\n🚀 Deployment Information:")
-    print("=" * 50)
-    
-    print("\n📋 **STEP 1: GitHub Repository**")
-    print("1. Create new repository on GitHub")
-    print("2. Upload all files from current directory")
-    print("3. Copy repository URL")
-    
-    print("\n📋 **STEP 2: Render Deployment**")
-    print("1. Go to: https://render.com")
-    print("2. Connect GitHub repository")
-    print("3. Use these settings:")
-    print("   - Build Command: pip install -r requirements.txt")
-    print("   - Start Command: python render_bot.py")
-    print("   - Environment: Python 3")
-    
-    print("\n📋 **STEP 3: Cloudflare Workers**")
-    print("1. Go to: https://workers.cloudflare.com")
-    print("2. Create new worker")
-    print("3. Copy code from: cloudflare_worker_scheduler.js")
-    print("4. Set environment variables")
-    print("5. Add cron triggers")
-    
-    print("\n📋 **STEP 4: UptimeRobot**")
-    print("1. Go to: https://uptimerobot.com")
-    print("2. Add monitor for your Render URL")
-    print("3. Set interval to 5 minutes")
-    
-    print("\n🎯 **Expected Results:**")
-    print("- 10 videos uploaded daily")
-    print("- 24/7 automation")
-    print("- Telegram notifications")
-    print("- 100% free hosting")
-
-def main():
-    """Run complete setup verification"""
-    print("🚀 YouTube Automation Setup Verification")
-    print("=" * 50)
-    
-    all_good = True
-    
-    # Check environment variables
-    if not check_environment_variables():
-        all_good = False
-    
-    # Check required files
-    if not check_required_files():
-        all_good = False
-    
-    # Test APIs
-    if not test_youtube_api():
-        all_good = False
-    
-    if not test_groq_api():
-        all_good = False
-    
-    if not test_telegram_bot():
-        all_good = False
-    
-    print("\n" + "=" * 50)
-    
-    if all_good:
-        print("🎉 **SETUP VERIFICATION PASSED!**")
-        print("✅ All systems are ready for deployment")
-        print("\n🚀 Ready to deploy on Render + Cloudflare!")
-        generate_deployment_urls()
-    else:
-        print("❌ **SETUP VERIFICATION FAILED!**")
-        print("⚠️ Please fix the issues above before deployment")
-        print("\n📋 Common fixes:")
-        print("- Check .env file for missing variables")
-        print("- Verify API keys are correct")
-        print("- Ensure all files are present")
-    
-    print("\n📞 Need help? Check DEPLOYMENT_GUIDE.md")
+    def run_forever(self):
+        """Run Telegram bot forever"""
+        print("🚀 Starting Telegram YouTube Bot...")
+        
+        # Bot starts in STOPPED state - wait for user command
+        self.is_running = False
+        self.send_message("🤖 <b>YouTube Bot Ready!</b>\n\n📱 Send <b>'start'</b> to begin automation\n📱 Send <b>'stop'</b> to stop automation")
+        
+        print("🤖 Telegram bot is running...")
+        print("💬 Bot is STOPPED - Send 'start' command to begin automation!")
+        
+        # Main bot loop
+        while True:
+            try:
+                updates = self.get_updates()
+                
+                for update in updates:
+                    self.last_update_id = update['update_id']
+                    
+                    if 'message' in update:
+                        self.handle_command(update['message'])
+                
+                time.sleep(1)  # Small delay
+                
+            except KeyboardInterrupt:
+                print("\n⏹️ Bot stopped by user")
+                self.send_message("⏹️ <b>Bot stopped by admin!</b>")
+                break
+            except Exception as e:
+                print(f"❌ Bot error: {e}")
+                time.sleep(30)  # Wait 30 seconds on error
 
 if __name__ == "__main__":
-    main()
+    print("🤖 TELEGRAM YOUTUBE AUTOMATION BOT")
+    print("🔥 24/7 running with commands!")
+    print("📱 Control via Telegram messages")
+    
+    bot = TelegramYouTubeBot()
+    bot.run_forever()
