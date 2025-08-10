@@ -88,9 +88,17 @@ def start_bot():
     try:
         print("🚀 Starting Telegram YouTube Bot...")
         bot_instance = TelegramYouTubeBot()
+        
+        # Send startup message
+        bot_instance.send_message("🤖 <b>Bot Started!</b>\n\n✅ Render deployment successful\n📱 Send 'start' to begin automation")
+        
+        # Start the bot
         bot_instance.run_forever()
     except Exception as e:
         print(f"❌ Bot error: {e}")
+        # Send error message
+        if bot_instance:
+            bot_instance.send_message(f"❌ <b>Bot Error:</b>\n\n{str(e)}")
         time.sleep(30)
         start_bot()  # Restart on error
 
