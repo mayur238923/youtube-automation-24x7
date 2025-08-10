@@ -9,6 +9,7 @@ import threading
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 import requests
+from youtube_bot import YouTubeBot
 
 load_dotenv()
 
@@ -18,7 +19,8 @@ app = Flask(__name__)
 # Global bot state
 bot_state = {
     'is_running': False,
-    'uploads_today': 0
+    'uploads_today': 0,
+    'youtube_bot': None
 }
 
 def send_telegram_message(message):
@@ -68,6 +70,10 @@ def telegram_webhook():
             if text in ['start', '/start']:
                 bot_state['is_running'] = True
                 
+                # Initialize YouTube bot
+                if not bot_state['youtube_bot']:
+                    bot_state['youtube_bot'] = YouTubeBot()
+                
                 response = """🚀 <b>YouTube Automation Started!</b>
 
 ✅ Status: Running 24/7
@@ -77,7 +83,8 @@ def telegram_webhook():
 <b>Commands:</b>
 • <code>stop</code> - Stop automation
 • <code>status</code> - Check progress  
-• <code>upload</code> - Manual upload
+• <code>upload tech</code> - Manual tech upload
+• <code>upload entertainment</code> - Manual entertainment upload
 • <code>help</code> - Show commands"""
                 
                 send_telegram_message(response)
@@ -96,11 +103,49 @@ def telegram_webhook():
 Send 'start' to begin automation"""
                 send_telegram_message(status)
                 
-            elif text in ['upload', '/upload']:
+            elif text in ['upload', '/upload', 'upload tech']:
                 if bot_state['is_running']:
-                    send_telegram_message("🎬 <b>Processing video...</b>")
-                    bot_state['uploads_today'] += 1
-                    send_telegram_message(f"✅ <b>Video Uploaded!</b>\n\n📊 Today: {bot_state['uploads_today']}/10")
+                    if not bot_state['youtube_bot']:
+                        bot_state['youtube_bot'] = YouTubeBot()
+                    
+                    send_telegram_message("🎬 <b>Processing tech video...</b>")
+                    
+                    # Process in background thread
+                    def process_video():
+                        try:
+                            success = bot_state['youtube_bot'].process_tech_video()
+                            if success:
+                                bot_state['uploads_today'] += 1
+                                send_telegram_message(f"✅ <b>Tech Video Uploaded!</b>\n\n📊 Today: {bot_state['uploads_today']}/10")
+                            else:
+                                send_telegram_message("❌ <b>Tech video upload failed!</b>")
+                        except Exception as e:
+                            send_telegram_message(f"❌ <b>Upload Error:</b>\n\n{str(e)}")
+                    
+                    threading.Thread(target=process_video, daemon=True).start()
+                else:
+                    send_telegram_message("⚠️ Bot is stopped. Send 'start' first.")
+                    
+            elif text in ['upload entertainment']:
+                if bot_state['is_running']:
+                    if not bot_state['youtube_bot']:
+                        bot_state['youtube_bot'] = YouTubeBot()
+                    
+                    send_telegram_message("🎬 <b>Processing entertainment video...</b>")
+                    
+                    # Process in background thread
+                    def process_video():
+                        try:
+                            success = bot_state['youtube_bot'].process_entertainment_video()
+                            if success:
+                                bot_state['uploads_today'] += 1
+                                send_telegram_message(f"✅ <b>Entertainment Video Uploaded!</b>\n\n📊 Today: {bot_state['uploads_today']}/10")
+                            else:
+                                send_telegram_message("❌ <b>Entertainment video upload failed!</b>")
+                        except Exception as e:
+                            send_telegram_message(f"❌ <b>Upload Error:</b>\n\n{str(e)}")
+                    
+                    threading.Thread(target=process_video, daemon=True).start()
                 else:
                     send_telegram_message("⚠️ Bot is stopped. Send 'start' first.")
                     
