@@ -2095,51 +2095,116 @@ This test confirms that:
         return hours * 3600 + minutes * 60 + seconds
 
     def is_copyright_safe(self, video_data):
-        """Check if video is copyright safe"""
+        """Enhanced copyright safety check"""
         # Extensive copyright filtering
         danger_keywords = [
             'official', 'vevo', 'music', 'song', 'album', 'records',
             'trailer', 'movie', 'film', 'netflix', 'disney', 'hbo',
             'sports', 'nfl', 'nba', 'fifa', 'match', 'game highlights',
-            'news', 'breaking', 'live', 'concert', 'performance'
+            'news', 'breaking', 'live', 'concert', 'performance',
+            'premium', 'exclusive', 'copyrighted', 'licensed'
         ]
         
         text = f"{video_data['title']} {video_data['channel']}".lower()
         
         for keyword in danger_keywords:
             if keyword in text:
+                self.log_activity(f"🚫 Blocked by keyword '{keyword}': {video_data['title'][:30]}...")
                 return False
         
         # Check channel name patterns
         if len(video_data['channel']) < 5:
+            self.log_activity(f"🚫 Channel name too short: {video_data['channel']}")
             return False
         
         if any(char.isdigit() for char in video_data['channel'][:3]):
+            self.log_activity(f"🚫 Channel has numbers: {video_data['channel']}")
             return False
         
+        # Additional safety checks
+        title_lower = video_data['title'].lower()
+        
+        # Block if title suggests it's unavailable content
+        unavailable_indicators = [
+            'deleted', 'removed', 'unavailable', 'private', 'restricted',
+            'blocked', 'suspended', 'terminated', 'banned'
+        ]
+        
+        for indicator in unavailable_indicators:
+            if indicator in title_lower:
+                self.log_activity(f"🚫 Unavailable content indicator: {indicator}")
+                return False
+        
+        self.log_activity(f"✅ Safe content: {video_data['title'][:30]}...")
         return True
 
     def download_video(self, url, video_id):
-        """Download video"""
+        """Download video with enhanced error handling"""
         try:
             filename = f"downloads/{video_id}.mp4"
             
+            # Enhanced yt-dlp options for better compatibility
             ydl_opts = {
-                'format': 'best[height<=720][ext=mp4]/best[ext=mp4]',
+                'format': 'best[height<=720][ext=mp4]/best[ext=mp4]/best',
                 'outtmpl': filename,
                 'quiet': True,
                 'no_warnings': True,
-                'nocheckcertificate': True
+                'nocheckcertificate': True,
+                'ignoreerrors': True,
+                'extract_flat': False,
+                'writesubtitles': False,
+                'writeautomaticsub': False,
+                'retries': 3,
+                'fragment_retries': 3,
+                'skip_unavailable_fragments': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # First check if video is available
+                try:
+                    info = ydl.extract_info(url, download=False)
+                    if not info:
+                        self.log_activity(f"⚠️ Video info not available: {video_id}")
+                        return None
+                    
+                    # Check if video is private/unavailable
+                    if info.get('availability') in ['private', 'premium_only', 'subscriber_only', 'needs_auth']:
+                        self.log_activity(f"⚠️ Video restricted: {video_id} - {info.get('availability')}")
+                        return None
+                        
+                except Exception as info_error:
+                    self.log_activity(f"⚠️ Cannot extract video info: {video_id} - {info_error}")
+                    return None
+                
+                # Now try to download
                 ydl.download([url])
             
             if os.path.exists(filename):
-                return filename
+                file_size = os.path.getsize(filename)
+                if file_size > 1000:  # At least 1KB
+                    self.log_activity(f"✅ Downloaded: {video_id} ({file_size} bytes)")
+                    return filename
+                else:
+                    self.log_activity(f"⚠️ Downloaded file too small: {video_id}")
+                    os.remove(filename)
+                    return None
+            else:
+                self.log_activity(f"⚠️ Download failed: {video_id} - File not created")
+                return None
                 
         except Exception as e:
-            self.log_activity(f"Download error: {e}")
+            error_msg = str(e).lower()
+            if 'unavailable' in error_msg:
+                self.log_activity(f"⚠️ Video unavailable: {video_id}")
+            elif 'private' in error_msg:
+                self.log_activity(f"⚠️ Video private: {video_id}")
+            elif 'copyright' in error_msg:
+                self.log_activity(f"⚠️ Copyright issue: {video_id}")
+            else:
+                self.log_activity(f"❌ Download error: {video_id} - {e}")
         
         return None
 
@@ -2309,39 +2374,79 @@ This test confirms that:
         category_id = '28' if category == 'tech' else '24'
         videos = self.get_safe_videos(category_id, max_results=10)
         
+        successful_uploads = 0
+        attempted_videos = 0
+        max_attempts = min(len(videos), 10)  # Try maximum 10 videos
+        
         for video in videos:
-            if not self.check_duplicate(video):
-                # Download
+            if attempted_videos >= max_attempts:
+                break
+                
+            attempted_videos += 1
+            self.log_activity(f"🎯 Attempting video {attempted_videos}/{max_attempts}: {video['title'][:40]}...")
+            
+            if self.check_duplicate(video):
+                self.log_activity(f"⏭️ Skipping duplicate: {video['id']}")
+                continue
+                
+            # Download with retry mechanism
+            video_path = None
+            download_attempts = 0
+            max_download_attempts = 2
+            
+            while download_attempts < max_download_attempts and not video_path:
+                download_attempts += 1
+                self.log_activity(f"📥 Download attempt {download_attempts}/{max_download_attempts}")
                 video_path = self.download_video(video['url'], video['id'])
-                if not video_path:
-                    continue
                 
-                # Create short
-                short_path = self.create_short(video_path, video['id'])
-                if not short_path:
-                    self.cleanup(video_path)
-                    continue
+                if not video_path and download_attempts < max_download_attempts:
+                    self.log_activity(f"⏳ Retrying download in 5 seconds...")
+                    time.sleep(5)
+            
+            if not video_path:
+                self.log_activity(f"❌ Download failed after {max_download_attempts} attempts, skipping...")
+                continue
                 
-                # Generate content
-                title = self.generate_advanced_title(video, category)
-                description = self.generate_advanced_description(video, title, category)
+            # Create short
+            short_path = self.create_short(video_path, video['id'])
+            if not short_path:
+                self.log_activity(f"❌ Short creation failed, skipping...")
+                self.cleanup(video_path)
+                continue
                 
-                # Upload
-                upload_url = self.upload_to_youtube(short_path, title, description)
+            # Generate content
+            title = self.generate_advanced_title(video, category)
+            description = self.generate_advanced_description(video, title, category)
+            
+            # Upload
+            self.log_activity(f"📤 Uploading: {title[:40]}...")
+            upload_url = self.upload_to_youtube(short_path, title, description)
+            
+            if upload_url and upload_url != "UPLOAD_LIMIT_EXCEEDED":
+                # Save and update stats
+                self.save_processed_video(video)
+                self.save_uploaded_video(title, description, upload_url, category)
+                self.update_stats(category)
                 
-                if upload_url:
-                    # Save and update stats
-                    self.save_processed_video(video)
-                    self.save_uploaded_video(title, description, upload_url, category)
-                    self.update_stats(category)
-                    
-                    self.log_activity(f"✅ {category.upper()} uploaded: {upload_url}")
-                    
-                    # Cleanup
-                    self.cleanup(video_path, short_path)
-                    return True
+                successful_uploads += 1
+                self.log_activity(f"🎉 {category.upper()} uploaded successfully!")
+                self.log_activity(f"📺 URL: {upload_url}")
                 
+                # Cleanup
                 self.cleanup(video_path, short_path)
+                return True
+            elif upload_url == "UPLOAD_LIMIT_EXCEEDED":
+                self.log_activity(f"⚠️ Upload limit exceeded, stopping attempts")
+                self.cleanup(video_path, short_path)
+                break
+            else:
+                self.log_activity(f"❌ Upload failed, trying next video...")
+                self.cleanup(video_path, short_path)
+        
+        if successful_uploads == 0:
+            self.log_activity(f"❌ No successful uploads from {attempted_videos} attempts")
+        
+        return successful_uploads > 0
         
         return False
 
