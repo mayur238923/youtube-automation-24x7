@@ -32,791 +32,708 @@ load_dotenv()
 # Flask app for server health checks and dashboard
 app = Flask(__name__)
 
-# Modern Professional Dashboard
-DASHBOARD_HTML = """
+# Advanced Professional Dashboard
+ADVANCED_DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Automation Dashboard</title>
+    <title>🎬 Advanced YouTube Automation Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-color: #ff0000;
+            --secondary-color: #282828;
+            --accent-color: #00d4ff;
+            --success-color: #00ff88;
+            --warning-color: #ffaa00;
+            --danger-color: #ff4444;
+            --dark-bg: #0f0f0f;
+            --card-bg: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+            --border-color: #333333;
         }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            color: #1a202c;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a1a2e 100%);
+            color: var(--text-primary);
             line-height: 1.6;
+            min-height: 100vh;
         }
-        
-        .container {
-            max-width: 1200px;
+
+        .dashboard-container {
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
-        
-        .header {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border: 1px solid #e2e8f0;
+
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #cc0000 100%);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(255, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
         }
-        
+
         .header-content {
+            position: relative;
+            z-index: 1;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
         }
-        
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            color: #2d3748;
+
+        .header-title {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 15px;
         }
-        
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
+
+        .header-title h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .youtube-icon {
+            font-size: 3rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            animation: glow 2s infinite alternate;
         }
-        
+
         .status-active {
-            background: #10b981;
-            color: white;
+            background: linear-gradient(135deg, var(--success-color), #00cc77);
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4);
         }
-        
+
         .status-inactive {
-            background: #ef4444;
-            color: white;
+            background: linear-gradient(135deg, var(--danger-color), #cc3333);
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
         }
-        
+
+        @keyframes glow {
+            from { box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4); }
+            to { box-shadow: 0 4px 25px rgba(0, 255, 136, 0.8); }
+        }
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 32px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
         }
-        
+
         .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
-        
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            border-color: var(--accent-color);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        }
+
         .stat-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 12px;
+            margin-bottom: 15px;
         }
-        
+
         .stat-icon {
-            font-size: 20px;
-        }
-        
-        .stat-label {
-            font-size: 14px;
-            color: #64748b;
-            font-weight: 500;
-        }
-        
-        .stat-number {
-            font-size: 32px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 4px;
-        }
-        
-        .stat-change {
-            font-size: 12px;
-            color: #10b981;
-            font-weight: 500;
-        }
-        
-        .main-content {
-            background: white;
+            font-size: 2rem;
+            padding: 10px;
             border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, var(--accent-color), #0099cc);
         }
-        
-        .content-header {
-            padding: 24px;
-            border-bottom: 1px solid #e2e8f0;
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            color: var(--success-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .control-panel {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .control-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
         }
-        
-        .content-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e293b;
+
+        .control-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
         }
-        
-        .toolbar {
+
+        .control-buttons {
             display: flex;
-            gap: 8px;
-            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
         }
-        
+
         .btn {
-            padding: 8px 16px;
-            border: 1px solid #d1d5db;
+            padding: 12px 24px;
+            border: none;
             border-radius: 8px;
-            background: white;
-            color: #374151;
-            font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn:hover {
-            background: #f9fafb;
-            border-color: #9ca3af;
-        }
-        
-        .btn.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-        
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-        
-        .btn-primary:hover {
-            background: #2563eb;
-        }
-        
-        .video-list {
-            padding: 0;
-        }
-        
-        .video-item {
-            display: flex;
-            align-items: center;
-            padding: 16px 24px;
-            border-bottom: 1px solid #f1f5f9;
-            transition: background 0.2s;
-        }
-        
-        .video-item:hover {
-            background: #f8fafc;
-        }
-        
-        .video-item:last-child {
-            border-bottom: none;
-        }
-        
-        .video-thumbnail {
-            width: 120px;
-            height: 68px;
-            border-radius: 8px;
-            background: #f1f5f9;
-            margin-right: 16px;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        
-        .video-thumbnail img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .video-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-        }
-        
-        .video-content {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .video-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 4px;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        .video-meta {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 8px;
-        }
-        
-        .meta-item {
-            font-size: 13px;
-            color: #64748b;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .category-badge {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
+            transition: all 0.3s ease;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
         }
-        
-        .category-tech {
-            background: #dbeafe;
-            color: #1d4ed8;
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
         }
-        
-        .category-entertainment {
-            background: #fce7f3;
-            color: #be185d;
+
+        .btn:hover::before {
+            left: 100%;
         }
-        
-        .video-stats {
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), #cc0000);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #00cc77);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning-color), #cc8800);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.3);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, var(--accent-color), #0099cc);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .video-section {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .video-header {
+            padding: 25px 30px;
+            border-bottom: 2px solid var(--border-color);
+            background: linear-gradient(135deg, var(--secondary-color), #333333);
+        }
+
+        .video-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .video-filters {
             display: flex;
-            gap: 16px;
-            margin-top: 8px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
-        
-        .stat-item {
-            font-size: 13px;
-            color: #64748b;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .video-actions {
-            display: flex;
-            gap: 8px;
-            margin-left: 16px;
-        }
-        
-        .action-btn {
-            padding: 6px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            background: white;
-            color: #374151;
-            font-size: 12px;
-            font-weight: 500;
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 20px;
             cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
-        
-        .action-btn:hover {
-            background: #f9fafb;
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            background: rgba(0, 212, 255, 0.1);
         }
-        
-        .action-btn.watch {
-            color: #3b82f6;
-            border-color: #3b82f6;
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 30px;
         }
-        
-        .action-btn.edit {
-            color: #10b981;
-            border-color: #10b981;
-        }
-        
-        .action-btn.refresh {
-            color: #f59e0b;
-            border-color: #f59e0b;
-        }
-        
-        .action-btn.delete {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 48px 24px;
-            color: #64748b;
-        }
-        
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-        
+
         .loading {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 48px;
-            color: #64748b;
+            padding: 60px;
+            color: var(--text-secondary);
         }
-        
+
         .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e5e7eb;
-            border-top: 2px solid #3b82f6;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-right: 12px;
+            margin-right: 15px;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .refresh-fab {
+
+        .realtime-indicator {
             position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 56px;
-            height: 56px;
-            background: #3b82f6;
-            border: none;
-            border-radius: 50%;
+            top: 20px;
+            right: 20px;
+            background: var(--success-color);
             color: white;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-            transition: all 0.3s;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4);
             z-index: 1000;
+            animation: slideIn 0.5s ease;
         }
-        
-        .refresh-fab:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
         }
-        
+
         @media (max-width: 768px) {
-            .container {
-                padding: 16px;
-            }
-            
-            .header-content {
-                flex-direction: column;
-                gap: 16px;
-                align-items: flex-start;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .content-header {
-                flex-direction: column;
-                gap: 16px;
-                align-items: flex-start;
-            }
-            
-            .toolbar {
-                flex-wrap: wrap;
-            }
-            
-            .video-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-            
-            .video-thumbnail {
-                width: 100%;
-                height: 180px;
-                margin-right: 0;
-            }
-            
-            .video-actions {
-                margin-left: 0;
-                width: 100%;
-                justify-content: flex-end;
-            }
+            .dashboard-container { padding: 15px; }
+            .header-content { flex-direction: column; text-align: center; }
+            .header-title h1 { font-size: 2rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .control-buttons { justify-content: center; }
+            .video-grid { grid-template-columns: 1fr; padding: 20px; }
+            .video-filters { justify-content: center; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <div class="dashboard-container">
+        <header class="dashboard-header">
             <div class="header-content">
-                <h1>
-                    🎬 YouTube Automation
-                    <span class="status-badge" id="botStatus">Loading...</span>
-                </h1>
+                <div class="header-title">
+                    <span class="youtube-icon">🎬</span>
+                    <h1>Advanced YouTube Automation</h1>
+                </div>
+                <div class="header-controls">
+                    <div id="botStatus" class="status-indicator status-active">
+                        <span class="status-dot"></span>
+                        ACTIVE
+                    </div>
+                    <button id="toggleRealTime" class="btn btn-warning">⏸️ Pause Updates</button>
+                </div>
             </div>
-        </div>
-        
-        <div class="stats-grid">
+        </header>
+
+        <section class="stats-grid">
             <div class="stat-card">
                 <div class="stat-header">
                     <span class="stat-icon">📊</span>
                     <span class="stat-label">Total Videos</span>
                 </div>
-                <div class="stat-number" id="totalUploads">0</div>
-                <div class="stat-change">All time uploads</div>
+                <div id="totalUploads" class="stat-number">0</div>
+                <div class="stat-change"><span>📈</span> All time uploads</div>
             </div>
-            
+
             <div class="stat-card">
                 <div class="stat-header">
                     <span class="stat-icon">📅</span>
-                    <span class="stat-label">Today</span>
+                    <span class="stat-label">Today's Uploads</span>
                 </div>
-                <div class="stat-number" id="todayUploads">0</div>
-                <div class="stat-change">Daily uploads</div>
+                <div id="todayUploads" class="stat-number">0</div>
+                <div class="stat-change"><span>🎯</span> Daily progress</div>
             </div>
-            
+
             <div class="stat-card">
                 <div class="stat-header">
                     <span class="stat-icon">🔧</span>
-                    <span class="stat-label">Technology</span>
+                    <span class="stat-label">Tech Videos</span>
                 </div>
-                <div class="stat-number" id="techVideos">0</div>
-                <div class="stat-change">Tech category</div>
+                <div id="techVideos" class="stat-number">0</div>
+                <div class="stat-change"><span>💻</span> Technology category</div>
             </div>
-            
+
             <div class="stat-card">
                 <div class="stat-header">
                     <span class="stat-icon">🎭</span>
                     <span class="stat-label">Entertainment</span>
                 </div>
-                <div class="stat-number" id="entertainmentVideos">0</div>
-                <div class="stat-change">Entertainment category</div>
+                <div id="entertainmentVideos" class="stat-number">0</div>
+                <div class="stat-change"><span>🎪</span> Entertainment category</div>
             </div>
-        </div>
-        
-        <div class="main-content">
-            <div class="content-header">
-                <h2 class="content-title">Video Library</h2>
-                <div class="toolbar">
-                    <button class="btn active" onclick="filterVideos('all')">All</button>
-                    <button class="btn" onclick="filterVideos('tech')">Tech</button>
-                    <button class="btn" onclick="filterVideos('entertainment')">Entertainment</button>
-                    <button class="btn" onclick="filterVideos('today')">Today</button>
-                    <button class="btn btn-primary" onclick="refreshAllStats()">Refresh All</button>
+        </section>
+
+        <section class="control-panel">
+            <div class="control-header">
+                <h2 class="control-title">🎮 Bot Controls</h2>
+                <div class="control-buttons">
+                    <button id="startBot" class="btn btn-success">▶️ Start Bot</button>
+                    <button id="stopBot" class="btn btn-danger">⏹️ Stop Bot</button>
+                    <button id="uploadTech" class="btn btn-info">🔧 Upload Tech</button>
+                    <button id="uploadEntertainment" class="btn btn-warning">🎭 Upload Entertainment</button>
+                    <button id="refreshData" class="btn btn-primary">🔄 Refresh All</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="video-section">
+            <div class="video-header">
+                <h2 class="video-title">📺 Video Library</h2>
+                <div class="video-filters">
+                    <button class="filter-btn active" data-filter="all">All Videos</button>
+                    <button class="filter-btn" data-filter="tech">🔧 Tech</button>
+                    <button class="filter-btn" data-filter="entertainment">🎭 Entertainment</button>
+                    <button class="filter-btn" data-filter="today">📅 Today</button>
                 </div>
             </div>
             
-            <div class="video-list" id="videosGrid">
+            <div id="videoGrid" class="video-grid">
                 <div class="loading">
                     <div class="spinner"></div>
                     Loading videos...
                 </div>
             </div>
-        </div>
+        </section>
     </div>
-    
-    <button class="refresh-fab" onclick="refreshData()" title="Refresh Data">
-        🔄
-    </button>
-    
+
+    <div id="realtimeIndicator" class="realtime-indicator">🔴 LIVE</div>
+
     <script>
-        let allVideos = [];
-        let currentFilter = 'all';
-        
-        function timeAgo(date) {
-            const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-            
-            const intervals = {
-                year: 31536000,
-                month: 2592000,
-                week: 604800,
-                day: 86400,
-                hour: 3600,
-                minute: 60
-            };
-            
-            for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-                const interval = Math.floor(seconds / secondsInUnit);
-                if (interval >= 1) {
-                    return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
-                }
+        // Advanced Dashboard JavaScript (Inline for immediate loading)
+        class YouTubeDashboard {
+            constructor() {
+                this.updateInterval = 5000;
+                this.currentFilter = 'all';
+                this.allVideos = [];
+                this.isRealTimeEnabled = true;
+                this.init();
             }
             
-            return 'Just now';
-        }
-        
-        function formatNumber(num) {
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
-            } else if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'K';
+            init() {
+                console.log('🚀 Advanced YouTube Dashboard Initialized');
+                this.setupEventListeners();
+                this.startRealTimeUpdates();
+                this.loadInitialData();
             }
-            return num.toString();
-        }
-        
-        async function editVideo(videoId) {
-            const newTitle = prompt('Enter new title:');
-            const newDescription = prompt('Enter new description:');
-            const newCategory = prompt('Enter category (tech/entertainment):');
             
-            if (newTitle && newDescription && newCategory) {
-                try {
-                    const response = await fetch(`/api/videos/${videoId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            title: newTitle,
-                            description: newDescription,
-                            category: newCategory
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        alert('Video updated successfully!');
-                        fetchData(); // Refresh data
-                    } else {
-                        alert('Error: ' + result.error);
-                    }
-                } catch (error) {
-                    alert('Error updating video: ' + error.message);
-                }
-            }
-        }
-        
-        async function deleteVideo(videoId) {
-            if (confirm('Are you sure you want to delete this video from tracking?')) {
-                try {
-                    const response = await fetch(`/api/videos/${videoId}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        alert('Video deleted successfully!');
-                        fetchData(); // Refresh data
-                    } else {
-                        alert('Error: ' + result.error);
-                    }
-                } catch (error) {
-                    alert('Error deleting video: ' + error.message);
-                }
-            }
-        }
-        
-        async function refreshVideoStats(videoId) {
-            try {
-                const response = await fetch(`/api/videos/${videoId}`);
-                const result = await response.json();
+            setupEventListeners() {
+                document.getElementById('startBot')?.addEventListener('click', () => this.startBot());
+                document.getElementById('stopBot')?.addEventListener('click', () => this.stopBot());
+                document.getElementById('uploadTech')?.addEventListener('click', () => this.manualUpload('tech'));
+                document.getElementById('uploadEntertainment')?.addEventListener('click', () => this.manualUpload('entertainment'));
+                document.getElementById('refreshData')?.addEventListener('click', () => this.refreshAllData());
+                document.getElementById('toggleRealTime')?.addEventListener('click', () => this.toggleRealTime());
                 
-                if (result.id) {
-                    alert(`Stats updated!\nViews: ${formatNumber(result.views)}\nLikes: ${formatNumber(result.likes)}\nComments: ${formatNumber(result.comments)}`);
-                    fetchData(); // Refresh data
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error refreshing stats: ' + error.message);
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.filterVideos(e.target.dataset.filter));
+                });
             }
-        }
-        
-        async function refreshAllStats() {
-            if (confirm('Refresh stats for all videos? This may take a moment.')) {
+            
+            async loadInitialData() {
                 try {
-                    const response = await fetch('/api/videos/refresh-stats', {
-                        method: 'POST'
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        alert(result.message);
-                        fetchData(); // Refresh data
-                    } else {
-                        alert('Error: ' + result.error);
-                    }
+                    await this.fetchDashboardData();
+                    await this.fetchVideoData();
                 } catch (error) {
-                    alert('Error refreshing all stats: ' + error.message);
+                    console.error('Error loading data:', error);
                 }
             }
-        }
-        
-        function filterVideos(filter) {
-            currentFilter = filter;
             
-            // Update button states
-            document.querySelectorAll('.btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Filter videos
-            let filteredVideos = allVideos;
-            
-            if (filter === 'tech') {
-                filteredVideos = allVideos.filter(v => v.category === 'tech');
-            } else if (filter === 'entertainment') {
-                filteredVideos = allVideos.filter(v => v.category === 'entertainment');
-            } else if (filter === 'today') {
-                const today = new Date().toDateString();
-                filteredVideos = allVideos.filter(v => 
-                    new Date(v.upload_date).toDateString() === today
-                );
+            startRealTimeUpdates() {
+                if (this.updateTimer) clearInterval(this.updateTimer);
+                
+                this.updateTimer = setInterval(() => {
+                    if (this.isRealTimeEnabled) {
+                        this.fetchDashboardData();
+                        this.fetchVideoData();
+                    }
+                }, this.updateInterval);
             }
             
-            displayVideos(filteredVideos);
-        }
-        
-        function displayVideos(videos) {
-            const grid = document.getElementById('videosGrid');
-            
-            if (videos.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📺</div>
-                        <h3>No videos available</h3>
-                        <p>Real-time YouTube videos will appear here when API is connected and videos are uploaded</p>
-                        <p style="margin-top: 10px; color: #64748b; font-size: 14px;">
-                            💡 Add your YouTube API key in .env file to see real data
-                        </p>
-                    </div>
-                `;
-                return;
+            async fetchDashboardData() {
+                try {
+                    const response = await fetch('/api/dashboard');
+                    const data = await response.json();
+                    this.updateDashboardStats(data);
+                    this.updateBotStatus(data.bot_status);
+                } catch (error) {
+                    console.error('Error fetching dashboard data:', error);
+                }
             }
             
-            grid.innerHTML = videos.map((video, index) => {
+            async fetchVideoData() {
+                try {
+                    const response = await fetch('/api/videos');
+                    const data = await response.json();
+                    this.allVideos = data.videos || [];
+                    this.displayVideos(this.filterVideosByCategory(this.currentFilter));
+                } catch (error) {
+                    console.error('Error fetching video data:', error);
+                }
+            }
+            
+            updateDashboardStats(data) {
+                this.updateElement('totalUploads', data.total_uploads || 0);
+                this.updateElement('todayUploads', data.today_uploads || 0);
+                this.updateElement('techVideos', data.tech_count || 0);
+                this.updateElement('entertainmentVideos', data.entertainment_count || 0);
+            }
+            
+            updateBotStatus(status) {
+                const statusElement = document.getElementById('botStatus');
+                if (statusElement) {
+                    statusElement.textContent = status === 'active' ? 'ACTIVE' : 'INACTIVE';
+                    statusElement.className = `status-indicator ${status === 'active' ? 'status-active' : 'status-inactive'}`;
+                }
+            }
+            
+            displayVideos(videos) {
+                const videoGrid = document.getElementById('videoGrid');
+                if (!videoGrid) return;
+                
+                if (videos.length === 0) {
+                    videoGrid.innerHTML = `
+                        <div style="text-align: center; padding: 60px; color: #aaa;">
+                            <div style="font-size: 4rem; margin-bottom: 20px;">📺</div>
+                            <h3>No videos available</h3>
+                            <p>Videos will appear here when the bot starts processing</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                videoGrid.innerHTML = videos.map((video, index) => this.createVideoCardHTML(video, index)).join('');
+            }
+            
+            createVideoCardHTML(video, index) {
                 const categoryClass = video.category === 'tech' ? 'category-tech' : 'category-entertainment';
                 const categoryIcon = video.category === 'tech' ? '🔧' : '🎭';
                 
                 return `
-                    <div class="video-item" data-video-id="${video.id || video.video_id || 'unknown'}">
-                        <div class="video-thumbnail">
-                            ${video.thumbnail ? 
-                                `<img src="${video.thumbnail}" alt="Thumbnail">` : 
-                                `<div class="video-placeholder">#${videos.length - index}</div>`
-                            }
+                    <div style="background: #282828; border-radius: 12px; overflow: hidden; border: 1px solid #333; transition: all 0.3s ease;">
+                        <div style="width: 100%; height: 200px; background: linear-gradient(135deg, #ff0000, #00d4ff); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem;">
+                            ${video.thumbnail ? `<img src="${video.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;">` : `#${index + 1}`}
                         </div>
-                        <div class="video-content">
-                            <div class="video-title">${video.title}</div>
-                            <div class="video-meta">
-                                <span class="meta-item">
-                                    📅 ${new Date(video.upload_date).toLocaleDateString()}
-                                </span>
-                                <span class="meta-item">
-                                    ⏰ ${timeAgo(video.upload_date)}
-                                </span>
-                                <span class="category-badge ${categoryClass}">
-                                    ${categoryIcon} ${video.category}
-                                </span>
-                                ${video.channel ? `<span class="meta-item">📺 ${video.channel}</span>` : ''}
+                        <div style="padding: 20px;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; line-height: 1.4;">${video.title}</h3>
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; font-size: 0.85rem; color: #aaa;">
+                                <span>📅 ${this.formatDate(video.upload_date)}</span>
+                                <span>⏰ ${this.timeAgo(video.upload_date)}</span>
+                                <span style="padding: 4px 12px; border-radius: 15px; font-size: 0.75rem; font-weight: 600; background: ${video.category === 'tech' ? '#00d4ff' : '#ffaa00'}; color: white;">${categoryIcon} ${video.category}</span>
                             </div>
-                            <div class="video-stats">
-                                <span class="stat-item">👁️ ${formatNumber(video.views || 0)}</span>
-                                <span class="stat-item">👍 ${formatNumber(video.likes || 0)}</span>
-                                <span class="stat-item">💬 ${formatNumber(video.comments || 0)}</span>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.9rem; color: #aaa;">
+                                <span>👁️ ${this.formatNumber(video.views || 0)}</span>
+                                <span>👍 ${this.formatNumber(video.likes || 0)}</span>
+                                <span>💬 ${this.formatNumber(video.comments || 0)}</span>
                             </div>
-                        </div>
-                        <div class="video-actions">
-                            <a href="${video.youtube_url}" target="_blank" class="action-btn watch">
-                                ▶️ Watch
-                            </a>
-                            <button class="action-btn edit" onclick="editVideo('${video.id || video.video_id}')">
-                                ✏️ Edit
-                            </button>
-                            <button class="action-btn refresh" onclick="refreshVideoStats('${video.id || video.video_id}')">
-                                🔄 Stats
-                            </button>
-                            <button class="action-btn delete" onclick="deleteVideo('${video.id || video.video_id}')">
-                                🗑️ Delete
-                            </button>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <a href="${video.youtube_url}" target="_blank" style="padding: 6px 12px; border: 1px solid #333; background: transparent; color: #aaa; border-radius: 6px; text-decoration: none; font-size: 0.8rem;">▶️ Watch</a>
+                            </div>
                         </div>
                     </div>
                 `;
-            }).join('');
-        }
-        
-        async function fetchData() {
-            try {
-                const response = await fetch('/api/dashboard');
-                const data = await response.json();
-                
-                // Update status
-                const statusBadge = document.getElementById('botStatus');
-                if (data.bot_status === 'active') {
-                    statusBadge.textContent = 'ACTIVE';
-                    statusBadge.className = 'status-badge status-active';
-                } else {
-                    statusBadge.textContent = 'INACTIVE';
-                    statusBadge.className = 'status-badge status-inactive';
+            }
+            
+            filterVideos(filter) {
+                this.currentFilter = filter;
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-filter="${filter}"]`)?.classList.add('active');
+                const filteredVideos = this.filterVideosByCategory(filter);
+                this.displayVideos(filteredVideos);
+            }
+            
+            filterVideosByCategory(filter) {
+                if (filter === 'all') return this.allVideos;
+                if (filter === 'tech') return this.allVideos.filter(v => v.category === 'tech');
+                if (filter === 'entertainment') return this.allVideos.filter(v => v.category === 'entertainment');
+                if (filter === 'today') {
+                    const today = new Date().toDateString();
+                    return this.allVideos.filter(v => new Date(v.upload_date).toDateString() === today);
                 }
+                return this.allVideos;
+            }
+            
+            async startBot() {
+                try {
+                    const response = await fetch('/api/bot/start', { method: 'POST' });
+                    const result = await response.json();
+                    console.log(result.success ? 'Bot started!' : 'Error starting bot');
+                } catch (error) {
+                    console.error('Failed to start bot:', error);
+                }
+            }
+            
+            async stopBot() {
+                try {
+                    const response = await fetch('/api/bot/stop', { method: 'POST' });
+                    const result = await response.json();
+                    console.log(result.success ? 'Bot stopped!' : 'Error stopping bot');
+                } catch (error) {
+                    console.error('Failed to stop bot:', error);
+                }
+            }
+            
+            async manualUpload(category) {
+                try {
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ category })
+                    });
+                    const result = await response.json();
+                    console.log(result.success ? `${category} upload started!` : 'Upload failed');
+                    if (result.success) {
+                        this.fetchDashboardData();
+                        this.fetchVideoData();
+                    }
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                }
+            }
+            
+            async refreshAllData() {
+                await this.fetchDashboardData();
+                await this.fetchVideoData();
+                console.log('Data refreshed!');
+            }
+            
+            toggleRealTime() {
+                this.isRealTimeEnabled = !this.isRealTimeEnabled;
+                const toggleBtn = document.getElementById('toggleRealTime');
+                if (toggleBtn) {
+                    toggleBtn.textContent = this.isRealTimeEnabled ? '⏸️ Pause Updates' : '▶️ Resume Updates';
+                    toggleBtn.className = `btn ${this.isRealTimeEnabled ? 'btn-warning' : 'btn-success'}`;
+                }
+                console.log(`Real-time updates ${this.isRealTimeEnabled ? 'enabled' : 'disabled'}`);
+            }
+            
+            updateElement(id, value) {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value;
+            }
+            
+            formatNumber(num) {
+                if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                return num.toString();
+            }
+            
+            formatDate(dateString) {
+                return new Date(dateString).toLocaleDateString();
+            }
+            
+            timeAgo(dateString) {
+                const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+                const intervals = { year: 31536000, month: 2592000, week: 604800, day: 86400, hour: 3600, minute: 60 };
                 
-                // Update stats
-                document.getElementById('totalUploads').textContent = data.total_uploads;
-                document.getElementById('todayUploads').textContent = data.today_uploads;
-                document.getElementById('techVideos').textContent = data.tech_count;
-                document.getElementById('entertainmentVideos').textContent = data.entertainment_count;
-                
-                // Update progress bar
-                const progress = (data.today_uploads / 10) * 100;
-                document.getElementById('uploadProgress').style.width = `${progress}%`;
-                
-                // Store and display videos
-                allVideos = data.videos;
-                filterVideos(currentFilter);
-                
-            } catch (error) {
-                console.error('Error fetching data:', error);
+                for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+                    const interval = Math.floor(seconds / secondsInUnit);
+                    if (interval >= 1) {
+                        return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
+                    }
+                }
+                return 'Just now';
             }
         }
         
-        function refreshData() {
-            const btn = document.querySelector('.refresh-fab');
-            btn.style.transform = 'rotate(360deg) scale(1.1)';
-            fetchData();
-            setTimeout(() => {
-                btn.style.transform = '';
-            }, 500);
-        }
-        
-        // Initial load
-        fetchData();
-        
-        // Auto-refresh every 30 seconds
-        setInterval(fetchData, 30000);
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'r' && e.ctrlKey) {
-                e.preventDefault();
-                refreshData();
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new YouTubeDashboard();
         });
     </script>
 </body>
@@ -824,12 +741,29 @@ DASHBOARD_HTML = """
 """
 
 # CRITICAL: Remove ANY other route that might be on '/'
-# Dashboard MUST be the ONLY route on '/'
+# Advanced Dashboard MUST be the ONLY route on '/'
 @app.route('/', methods=['GET'])
-def show_dashboard():
-    """Main dashboard - MUST return HTML, NOT JSON"""
-    # Force return HTML dashboard
-    return DASHBOARD_HTML  # Direct HTML return, no template rendering issues
+def show_advanced_dashboard():
+    """Advanced dashboard - MUST return HTML, NOT JSON"""
+    # Always use inline dashboard to avoid 404 errors for static files
+    return ADVANCED_DASHBOARD_HTML
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files (CSS, JS)"""
+    try:
+        if filename == 'advanced_dashboard.css':
+            with open('templates/advanced_dashboard.css', 'r', encoding='utf-8') as f:
+                response = app.response_class(f.read(), mimetype='text/css')
+                return response
+        elif filename == 'advanced_dashboard.js':
+            with open('templates/advanced_dashboard.js', 'r', encoding='utf-8') as f:
+                response = app.response_class(f.read(), mimetype='application/javascript')
+                return response
+    except FileNotFoundError:
+        pass
+    
+    return "File not found", 404
 
 @app.route('/api/dashboard')
 def api_dashboard():
@@ -1011,7 +945,264 @@ def status():
     """Status endpoint - returns JSON"""
     return health_check()
 
-# CRUD Operations for Videos
+# Advanced API Endpoints for Real-time Control
+@app.route('/api/bot/start', methods=['POST'])
+def start_bot_api():
+    """Start the bot via API"""
+    try:
+        global bot_instance
+        if bot_instance:
+            bot_instance.bot_active = True
+            bot_instance.log_activity("🚀 Bot started via API")
+            return jsonify({"success": True, "message": "Bot started successfully"})
+        else:
+            return jsonify({"success": False, "error": "Bot instance not available"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/bot/stop', methods=['POST'])
+def stop_bot_api():
+    """Stop the bot via API"""
+    try:
+        global bot_instance
+        if bot_instance:
+            bot_instance.bot_active = False
+            bot_instance.log_activity("⏹️ Bot stopped via API")
+            return jsonify({"success": True, "message": "Bot stopped successfully"})
+        else:
+            return jsonify({"success": False, "error": "Bot instance not available"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/upload', methods=['POST'])
+def manual_upload_api():
+    """Trigger manual upload via API"""
+    try:
+        data = request.get_json()
+        category = data.get('category', 'tech')
+        
+        global bot_instance
+        if bot_instance and hasattr(bot_instance, 'process_scheduled_upload'):
+            # Run upload in background thread to avoid blocking
+            import threading
+            
+            def upload_worker():
+                try:
+                    success = bot_instance.process_scheduled_upload(category)
+                    if success:
+                        bot_instance.log_activity(f"✅ Manual {category} upload completed via API")
+                    else:
+                        bot_instance.log_activity(f"❌ Manual {category} upload failed via API")
+                except Exception as e:
+                    bot_instance.log_activity(f"❌ Manual upload error: {e}")
+            
+            upload_thread = threading.Thread(target=upload_worker, daemon=True)
+            upload_thread.start()
+            
+            return jsonify({"success": True, "message": f"Manual {category} upload started"})
+        else:
+            return jsonify({"success": False, "error": "Bot instance not available"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/videos/<video_id>/refresh', methods=['POST'])
+def refresh_video_stats_api(video_id):
+    """Refresh stats for a specific video"""
+    try:
+        global bot_instance
+        if bot_instance and hasattr(bot_instance, 'get_live_video_stats'):
+            live_stats = bot_instance.get_live_video_stats(video_id)
+            if live_stats:
+                bot_instance.update_video_stats(video_id, live_stats)
+                return jsonify({"success": True, "message": "Stats refreshed", "stats": live_stats})
+            else:
+                return jsonify({"success": False, "error": "Could not fetch live stats"})
+        else:
+            return jsonify({"success": False, "error": "Bot instance not available"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/system-stats')
+def system_stats_api():
+    """Get system statistics"""
+    try:
+        import psutil
+        import time
+        
+        # Get system stats
+        cpu_usage = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        # Calculate uptime (approximate)
+        boot_time = psutil.boot_time()
+        uptime = time.time() - boot_time
+        
+        return jsonify({
+            "cpu_usage": round(cpu_usage, 1),
+            "memory_usage": round(memory.percent, 1),
+            "disk_usage": round(disk.percent, 1),
+            "uptime": int(uptime),
+            "memory_total": round(memory.total / (1024**3), 2),  # GB
+            "disk_total": round(disk.total / (1024**3), 2),  # GB
+            "timestamp": datetime.now().isoformat()
+        })
+    except ImportError:
+        # psutil not available, return mock data
+        return jsonify({
+            "cpu_usage": 25.5,
+            "memory_usage": 45.2,
+            "disk_usage": 60.1,
+            "uptime": 86400,  # 1 day
+            "memory_total": 8.0,
+            "disk_total": 100.0,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/api/logs')
+def get_logs_api():
+    """Get recent log entries"""
+    try:
+        log_file = 'logs/bot_activity.log'
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                # Return last 100 lines
+                recent_logs = lines[-100:] if len(lines) > 100 else lines
+                return jsonify({
+                    "logs": [line.strip() for line in recent_logs],
+                    "total_lines": len(lines)
+                })
+        else:
+            return jsonify({"logs": [], "total_lines": 0})
+    except Exception as e:
+        return jsonify({"error": str(e), "logs": []})
+
+@app.route('/api/logs/clear', methods=['POST'])
+def clear_logs_api():
+    """Clear log files"""
+    try:
+        log_file = 'logs/bot_activity.log'
+        if os.path.exists(log_file):
+            with open(log_file, 'w') as f:
+                f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Logs cleared via API\n")
+            return jsonify({"success": True, "message": "Logs cleared successfully"})
+        else:
+            return jsonify({"success": True, "message": "No logs to clear"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/youtube/trending')
+def get_youtube_trending():
+    """Get real YouTube trending videos"""
+    try:
+        global bot_instance
+        if bot_instance and hasattr(bot_instance, 'get_real_youtube_data'):
+            trending_videos = bot_instance.get_real_youtube_data()
+            return jsonify({
+                "videos": trending_videos,
+                "total": len(trending_videos),
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            return jsonify({"videos": [], "total": 0, "error": "YouTube API not available"})
+    except Exception as e:
+        return jsonify({"videos": [], "total": 0, "error": str(e)})
+
+@app.route('/api/youtube/search')
+def search_youtube_videos():
+    """Search YouTube videos"""
+    try:
+        query = request.args.get('q', '')
+        category = request.args.get('category', 'tech')
+        max_results = int(request.args.get('max_results', 10))
+        
+        global bot_instance
+        if bot_instance and bot_instance.youtube and query:
+            # Search for videos
+            search_request = bot_instance.youtube.search().list(
+                part='snippet',
+                q=query,
+                type='video',
+                maxResults=max_results,
+                order='relevance',
+                videoDuration='medium'  # 4-20 minutes
+            )
+            
+            search_response = search_request.execute()
+            
+            videos = []
+            for item in search_response.get('items', []):
+                video_data = {
+                    'id': item['id']['videoId'],
+                    'title': item['snippet']['title'],
+                    'description': item['snippet']['description'][:200] + '...',
+                    'thumbnail': item['snippet']['thumbnails']['medium']['url'],
+                    'channel': item['snippet']['channelTitle'],
+                    'upload_date': item['snippet']['publishedAt'],
+                    'youtube_url': f"https://www.youtube.com/watch?v={item['id']['videoId']}",
+                    'category': category
+                }
+                videos.append(video_data)
+            
+            return jsonify({
+                "videos": videos,
+                "total": len(videos),
+                "query": query,
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            return jsonify({"videos": [], "total": 0, "error": "Search query required or YouTube API not available"})
+    except Exception as e:
+        return jsonify({"videos": [], "total": 0, "error": str(e)})
+
+@app.route('/api/config')
+def get_config():
+    """Get bot configuration"""
+    try:
+        global bot_instance
+        if bot_instance:
+            config = {
+                "youtube_api_available": bool(bot_instance.youtube_api_key),
+                "groq_api_available": bool(bot_instance.groq_api_key),
+                "telegram_configured": bool(bot_instance.telegram_token and bot_instance.telegram_chat_id),
+                "elly_reaction_mode": getattr(bot_instance, 'elly_reaction_mode', False),
+                "bot_active": getattr(bot_instance, 'bot_active', False),
+                "test_upload_success": getattr(bot_instance, 'test_upload_success', False),
+                "update_interval": 5000,  # 5 seconds
+                "daily_upload_limit": 10,
+                "categories": ["tech", "entertainment"]
+            }
+            return jsonify(config)
+        else:
+            return jsonify({"error": "Bot instance not available"})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/api/config', methods=['POST'])
+def update_config():
+    """Update bot configuration"""
+    try:
+        data = request.get_json()
+        global bot_instance
+        
+        if bot_instance:
+            # Update configurable settings
+            if 'elly_reaction_mode' in data:
+                bot_instance.elly_reaction_mode = data['elly_reaction_mode']
+            
+            if 'elly_reaction_chance' in data:
+                bot_instance.elly_reaction_chance = float(data['elly_reaction_chance'])
+            
+            bot_instance.log_activity("⚙️ Configuration updated via API")
+            
+            return jsonify({"success": True, "message": "Configuration updated"})
+        else:
+            return jsonify({"success": False, "error": "Bot instance not available"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 @app.route('/api/videos', methods=['GET'])
 def get_videos():
     """Get all videos with real-time stats"""
@@ -1286,58 +1477,308 @@ class AutoYouTubeBot:
             print("📝 Logging system not available")
 
     def get_real_youtube_data(self):
-        """Get real YouTube trending videos with live stats"""
+        """Get real YouTube trending videos with live stats - Enhanced Version"""
         try:
             if not self.youtube:
-                # Return empty data if no API - no dummy data
                 return []
             
             videos_data = []
-            categories = ['28', '24']  # Tech and Entertainment
+            categories = [
+                {'id': '28', 'name': 'tech'},      # Science & Technology
+                {'id': '24', 'name': 'entertainment'}, # Entertainment
+                {'id': '22', 'name': 'entertainment'}, # People & Blogs
+                {'id': '23', 'name': 'entertainment'}  # Comedy
+            ]
             
-            for category_id in categories:
+            for category in categories:
                 try:
+                    # Get trending videos for this category
                     request = self.youtube.videos().list(
                         part='snippet,statistics,contentDetails',
                         chart='mostPopular',
                         regionCode='US',
-                        maxResults=5,
-                        videoCategoryId=category_id
+                        maxResults=8,
+                        videoCategoryId=category['id']
                     )
                     
                     response = request.execute()
                     
                     for item in response.get('items', []):
+                        # Enhanced video data with real-time stats
                         video_data = {
                             'id': item['id'],
+                            'video_id': item['id'],
                             'title': item['snippet']['title'],
-                            'description': item['snippet']['description'][:200] + '...',
+                            'description': self.truncate_description(item['snippet']['description']),
                             'upload_date': item['snippet']['publishedAt'],
                             'youtube_url': f"https://www.youtube.com/watch?v={item['id']}",
-                            'thumbnail': item['snippet']['thumbnails']['medium']['url'],
+                            'thumbnail': item['snippet']['thumbnails'].get('medium', {}).get('url', ''),
                             'channel': item['snippet']['channelTitle'],
-                            'category': 'tech' if category_id == '28' else 'entertainment',
+                            'category': category['name'],
                             'views': int(item['statistics'].get('viewCount', 0)),
                             'likes': int(item['statistics'].get('likeCount', 0)),
                             'comments': int(item['statistics'].get('commentCount', 0)),
                             'duration': item['contentDetails']['duration'],
-                            'live_stats': True
+                            'live_stats': True,
+                            'last_updated': datetime.now().isoformat(),
+                            'tags': item['snippet'].get('tags', [])[:5],  # First 5 tags
+                            'language': item['snippet'].get('defaultLanguage', 'en'),
+                            'definition': item['contentDetails'].get('definition', 'hd')
                         }
+                        
+                        # Additional metadata
+                        video_data['engagement_rate'] = self.calculate_engagement_rate(video_data)
+                        video_data['trending_score'] = self.calculate_trending_score(video_data)
+                        
                         videos_data.append(video_data)
                         
                 except Exception as e:
-                    print(f"Error fetching category {category_id}: {e}")
+                    self.log_activity(f"Error fetching category {category['id']}: {e}")
                     continue
             
-            # If no real data, return empty list - no dummy data
-            if not videos_data:
-                return []
-                
-            return videos_data[:10]  # Return top 10
+            # Sort by trending score and return top videos
+            videos_data.sort(key=lambda x: x.get('trending_score', 0), reverse=True)
+            
+            # Limit to top 20 videos
+            final_videos = videos_data[:20]
+            
+            self.log_activity(f"✅ Fetched {len(final_videos)} real YouTube videos with live stats")
+            
+            return final_videos
             
         except Exception as e:
-            print(f"Error getting real YouTube data: {e}")
+            self.log_activity(f"Error getting real YouTube data: {e}")
             return []
+
+    def truncate_description(self, description):
+        """Truncate description to reasonable length"""
+        if len(description) > 300:
+            return description[:297] + "..."
+        return description
+
+    def calculate_engagement_rate(self, video_data):
+        """Calculate engagement rate for video"""
+        try:
+            views = video_data.get('views', 0)
+            likes = video_data.get('likes', 0)
+            comments = video_data.get('comments', 0)
+            
+            if views == 0:
+                return 0
+            
+            engagement = (likes + comments * 2) / views * 100
+            return round(engagement, 2)
+        except:
+            return 0
+
+    def calculate_trending_score(self, video_data):
+        """Calculate trending score based on multiple factors"""
+        try:
+            views = video_data.get('views', 0)
+            likes = video_data.get('likes', 0)
+            comments = video_data.get('comments', 0)
+            
+            # Upload recency factor (newer videos get higher score)
+            upload_date = datetime.fromisoformat(video_data['upload_date'].replace('Z', '+00:00'))
+            hours_since_upload = (datetime.now(upload_date.tzinfo) - upload_date).total_seconds() / 3600
+            recency_factor = max(0, 1 - (hours_since_upload / (24 * 7)))  # Decay over a week
+            
+            # Base score from engagement
+            base_score = (views * 0.1) + (likes * 2) + (comments * 5)
+            
+            # Apply recency factor
+            trending_score = base_score * (1 + recency_factor)
+            
+            return int(trending_score)
+        except:
+            return 0
+
+    def get_enhanced_video_stats(self, video_id):
+        """Get enhanced statistics for a specific video"""
+        try:
+            if not self.youtube or not video_id or video_id == 'None':
+                return None
+            
+            request = self.youtube.videos().list(
+                part='snippet,statistics,contentDetails,status,topicDetails',
+                id=video_id
+            )
+            
+            response = request.execute()
+            
+            if response.get('items'):
+                item = response['items'][0]
+                
+                # Enhanced stats
+                stats = {
+                    'views': int(item['statistics'].get('viewCount', 0)),
+                    'likes': int(item['statistics'].get('likeCount', 0)),
+                    'comments': int(item['statistics'].get('commentCount', 0)),
+                    'duration': item['contentDetails']['duration'],
+                    'last_updated': datetime.now().isoformat(),
+                    
+                    # Additional metadata
+                    'privacy_status': item['status'].get('privacyStatus', 'unknown'),
+                    'upload_status': item['status'].get('uploadStatus', 'unknown'),
+                    'embeddable': item['status'].get('embeddable', False),
+                    'license': item['status'].get('license', 'unknown'),
+                    
+                    # Topic details (if available)
+                    'topics': item.get('topicDetails', {}).get('topicCategories', []),
+                    
+                    # Calculated metrics
+                    'engagement_rate': 0,
+                    'trending_score': 0
+                }
+                
+                # Calculate engagement metrics
+                stats['engagement_rate'] = self.calculate_engagement_rate(stats)
+                stats['trending_score'] = self.calculate_trending_score(stats)
+                
+                return stats
+            
+            return None
+            
+        except Exception as e:
+            self.log_activity(f"Error getting enhanced stats for {video_id}: {e}")
+            return None
+
+    def search_youtube_videos_advanced(self, query, category='tech', max_results=10):
+        """Advanced YouTube video search with filtering"""
+        try:
+            if not self.youtube or not query:
+                return []
+            
+            # Advanced search parameters
+            search_params = {
+                'part': 'snippet',
+                'q': query,
+                'type': 'video',
+                'maxResults': max_results * 2,  # Get more to filter
+                'order': 'relevance',
+                'videoDuration': 'medium',  # 4-20 minutes
+                'videoDefinition': 'high',
+                'videoEmbeddable': 'true',
+                'safeSearch': 'strict'
+            }
+            
+            # Category-specific filters
+            if category == 'tech':
+                search_params['videoCategoryId'] = '28'  # Science & Technology
+            elif category == 'entertainment':
+                search_params['videoCategoryId'] = '24'  # Entertainment
+            
+            search_request = self.youtube.search().list(**search_params)
+            search_response = search_request.execute()
+            
+            videos = []
+            video_ids = []
+            
+            # Collect video IDs for batch stats request
+            for item in search_response.get('items', []):
+                video_ids.append(item['id']['videoId'])
+            
+            # Get detailed stats for all videos in one request
+            if video_ids:
+                stats_request = self.youtube.videos().list(
+                    part='statistics,contentDetails,status',
+                    id=','.join(video_ids)
+                )
+                stats_response = stats_request.execute()
+                
+                # Create stats lookup
+                stats_lookup = {}
+                for item in stats_response.get('items', []):
+                    stats_lookup[item['id']] = item
+                
+                # Build video data with stats
+                for item in search_response.get('items', []):
+                    video_id = item['id']['videoId']
+                    stats_item = stats_lookup.get(video_id, {})
+                    
+                    # Apply safety filters
+                    if not self.is_video_safe_for_processing(item, stats_item):
+                        continue
+                    
+                    video_data = {
+                        'id': video_id,
+                        'video_id': video_id,
+                        'title': item['snippet']['title'],
+                        'description': self.truncate_description(item['snippet']['description']),
+                        'thumbnail': item['snippet']['thumbnails'].get('medium', {}).get('url', ''),
+                        'channel': item['snippet']['channelTitle'],
+                        'upload_date': item['snippet']['publishedAt'],
+                        'youtube_url': f"https://www.youtube.com/watch?v={video_id}",
+                        'category': category,
+                        'views': int(stats_item.get('statistics', {}).get('viewCount', 0)),
+                        'likes': int(stats_item.get('statistics', {}).get('likeCount', 0)),
+                        'comments': int(stats_item.get('statistics', {}).get('commentCount', 0)),
+                        'duration': stats_item.get('contentDetails', {}).get('duration', ''),
+                        'live_stats': True,
+                        'last_updated': datetime.now().isoformat()
+                    }
+                    
+                    # Calculate metrics
+                    video_data['engagement_rate'] = self.calculate_engagement_rate(video_data)
+                    video_data['trending_score'] = self.calculate_trending_score(video_data)
+                    
+                    videos.append(video_data)
+            
+            # Sort by trending score and return top results
+            videos.sort(key=lambda x: x.get('trending_score', 0), reverse=True)
+            
+            return videos[:max_results]
+            
+        except Exception as e:
+            self.log_activity(f"Error in advanced YouTube search: {e}")
+            return []
+
+    def is_video_safe_for_processing(self, search_item, stats_item):
+        """Enhanced safety check for video processing"""
+        try:
+            title = search_item['snippet']['title'].lower()
+            channel = search_item['snippet']['channelTitle'].lower()
+            description = search_item['snippet']['description'].lower()
+            
+            # Enhanced danger keywords
+            danger_keywords = [
+                'official', 'vevo', 'music video', 'song', 'album', 'records',
+                'trailer', 'movie', 'film', 'netflix', 'disney', 'hbo', 'paramount',
+                'sports', 'nfl', 'nba', 'fifa', 'match', 'game highlights',
+                'news', 'breaking', 'live stream', 'concert', 'performance',
+                'premium', 'exclusive', 'copyrighted', 'licensed', 'full movie',
+                'tv show', 'episode', 'season', 'series'
+            ]
+            
+            # Check title and description
+            text_to_check = f"{title} {channel} {description}"
+            for keyword in danger_keywords:
+                if keyword in text_to_check:
+                    return False
+            
+            # Check video stats if available
+            if stats_item:
+                stats = stats_item.get('statistics', {})
+                views = int(stats.get('viewCount', 0))
+                
+                # Minimum view requirement
+                if views < 10000:  # At least 10K views
+                    return False
+                
+                # Check if video is embeddable
+                status = stats_item.get('status', {})
+                if not status.get('embeddable', True):
+                    return False
+                
+                # Check privacy status
+                if status.get('privacyStatus') != 'public':
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.log_activity(f"Error in safety check: {e}")
+            return False
 
 
     def get_live_video_stats(self, video_id):
@@ -2158,6 +2599,79 @@ This test confirms that:
         self.log_activity(f"✅ Safe content: {video_data['title'][:30]}...")
         return True
 
+    
+    def download_video_advanced(self, url, video_id):
+        """Advanced download with multiple strategies"""
+        self.log_activity(f"🎯 Advanced download: {video_id}")
+        
+        filename = f"downloads/{video_id}.mp4"
+        
+        # Strategy 1: High quality MP4
+        strategies = [
+            {
+                'name': 'High Quality MP4',
+                'format': 'best[height<=720][ext=mp4]',
+                'opts': {'quiet': True, 'no_warnings': True}
+            },
+            {
+                'name': 'Any MP4',
+                'format': 'best[ext=mp4]',
+                'opts': {'quiet': True, 'no_warnings': True}
+            },
+            {
+                'name': 'Medium Quality',
+                'format': 'best[height<=480]',
+                'opts': {'quiet': True, 'no_warnings': True}
+            },
+            {
+                'name': 'Any MP4 Format',
+                'format': 'mp4',
+                'opts': {'quiet': True, 'no_warnings': True}
+            },
+            {
+                'name': 'Best Available',
+                'format': 'best',
+                'opts': {'quiet': True, 'no_warnings': True}
+            },
+            {
+                'name': 'Worst Quality (Last Resort)',
+                'format': 'worst',
+                'opts': {'quiet': True, 'no_warnings': True}
+            }
+        ]
+        
+        for i, strategy in enumerate(strategies):
+            try:
+                self.log_activity(f"📥 Strategy {i+1}/{len(strategies)}: {strategy['name']}")
+                
+                ydl_opts = {
+                    'format': strategy['format'],
+                    'outtmpl': filename,
+                    'retries': 2,
+                    'fragment_retries': 2,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    },
+                    **strategy['opts']
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+                
+                if os.path.exists(filename) and os.path.getsize(filename) > 1000:
+                    size_mb = os.path.getsize(filename) / (1024 * 1024)
+                    self.log_activity(f"✅ Success with {strategy['name']} ({size_mb:.1f} MB)")
+                    return filename
+                else:
+                    self.log_activity(f"❌ {strategy['name']} failed - no file created")
+                    
+            except Exception as e:
+                self.log_activity(f"❌ {strategy['name']} error: {str(e)[:100]}")
+                continue
+        
+        self.log_activity(f"❌ All download strategies failed: {video_id}")
+        return None
+
     def download_video(self, url, video_id):
         """Simple and reliable download method"""
         self.log_activity(f"⬇️ Downloading video: {video_id}")
@@ -2167,7 +2681,7 @@ This test confirms that:
             
             # Simple yt-dlp configuration that works
             ydl_opts = {
-                'format': 'best[height<=480]/best',  # Lower quality for reliability
+                'format': 'best[height<=720][ext=mp4]/best[ext=mp4]/best[height<=480]/mp4/best',  # Multiple fallbacks
                 'outtmpl': filename,
                 'quiet': True,
                 'no_warnings': True,
@@ -2185,19 +2699,26 @@ This test confirms that:
                 self.log_activity(f"✅ Download successful: {video_id}")
                 return filename
             else:
-                self.log_activity(f"❌ Download failed: {video_id}")
-                return None
+                self.log_activity(f"❌ Primary download failed, trying advanced method...")
+                return self.download_video_advanced(url, video_id)
                 
         except Exception as e:
-            self.log_activity(f"❌ Download error: {e}")
-            return None
+            self.log_activity(f"❌ Download error: {e}, trying advanced method...")
+            return self.download_video_advanced(url, video_id)
     
 
     def create_short(self, video_path, video_id):
-        """Create YouTube short with optional Elly reaction"""
+        """Create YouTube short with audio preservation"""
         try:
+            # Debug original video
+            self.debug_audio_info(video_path, "ORIGINAL")
+            
             with VideoFileClip(video_path) as video:
                 duration = video.duration
+                
+                # Check if video has audio
+                has_audio = video.audio is not None
+                self.log_activity(f"🎵 Audio detected: {'Yes' if has_audio else 'No'}")
                 
                 if duration <= 60:
                     clip = video
@@ -2210,19 +2731,46 @@ This test confirms that:
                     
                     end_time = min(start_time + 60, duration - 10)
                     clip = video.subclip(start_time, end_time)
+                    
+                    # Debug after clipping
+                    self.log_activity(f"✂️ Clipped: {start_time:.1f}s to {end_time:.1f}s")
+                    self.log_activity(f"🎵 Audio after clip: {'Yes' if clip.audio is not None else 'No'}")
                 
-                # Resize for shorts
+                # Resize for shorts with audio preservation
                 resized_clip = self.resize_for_shorts(clip)
                 
+                # Debug after resize
+                self.log_activity(f"🎵 Audio after resize: {'Yes' if resized_clip.audio is not None else 'No'}")
+                
+                # Verify audio is still present
+                if has_audio and resized_clip.audio is None:
+                    self.log_activity("⚠️ Audio lost during processing, restoring...")
+                    resized_clip = resized_clip.set_audio(clip.audio)
+                    self.log_activity(f"🎵 Audio restored: {'Yes' if resized_clip.audio is not None else 'No'}")
+                
                 output_path = f"shorts/short_{video_id}.mp4"
-                resized_clip.write_videofile(
-                    output_path,
-                    codec='libx264',
-                    audio_codec='aac',
-                    fps=30,
-                    verbose=False,
-                    logger=None
-                )
+                
+                # Write with explicit audio settings
+                write_params = {
+                    'codec': 'libx264',
+                    'fps': 30,
+                    'verbose': False,
+                    'logger': None
+                }
+                
+                # Only add audio codec if audio exists
+                if resized_clip.audio is not None:
+                    write_params['audio_codec'] = 'aac'
+                    write_params['audio_bitrate'] = '128k'
+                    self.log_activity("🎵 Writing video with audio (AAC 128k)")
+                else:
+                    self.log_activity("🔇 Writing video without audio")
+                
+                resized_clip.write_videofile(output_path, **write_params)
+                
+                # Debug final output
+                if os.path.exists(output_path):
+                    self.debug_audio_info(output_path, "FINAL OUTPUT")
                 
                 return output_path
                 
@@ -2231,7 +2779,7 @@ This test confirms that:
             return None
     
     def create_elly_reaction_short(self, video_path, video_id, elly_size=0.25, elly_position="top-right"):
-        """Create Elly reaction short with overlay"""
+        """Create Elly reaction short with overlay and audio preservation"""
         try:
             from moviepy.editor import CompositeVideoClip, concatenate_videoclips
             
@@ -2247,6 +2795,12 @@ This test confirms that:
             with VideoFileClip(video_path) as source_video:
                 with VideoFileClip(elly_path) as elly_video:
                     
+                    # Check audio in source video
+                    has_source_audio = source_video.audio is not None
+                    has_elly_audio = elly_video.audio is not None
+                    self.log_activity(f"🎵 Source audio: {'Yes' if has_source_audio else 'No'}")
+                    self.log_activity(f"🎵 Elly audio: {'Yes' if has_elly_audio else 'No'}")
+                    
                     # Determine duration (max 60 seconds for shorts)
                     target_duration = min(60, source_video.duration)
                     
@@ -2258,27 +2812,32 @@ This test confirms that:
                     else:
                         source_adjusted = source_video
                     
-                    # Adjust Elly video duration
+                    # Adjust Elly video duration (remove audio from Elly to avoid conflict)
                     if elly_video.duration < target_duration:
                         # Loop Elly video if too short
                         loop_count = int(target_duration / elly_video.duration) + 1
-                        clips = [elly_video] * loop_count
+                        clips = [elly_video.without_audio()] * loop_count  # Remove Elly audio
                         elly_looped = concatenate_videoclips(clips, method="compose")
                         elly_adjusted = elly_looped.subclip(0, target_duration)
                     else:
                         # Trim Elly video if too long
                         start_time = max(0, (elly_video.duration - target_duration) / 2)
-                        elly_adjusted = elly_video.subclip(start_time, start_time + target_duration)
+                        elly_adjusted = elly_video.subclip(start_time, start_time + target_duration).without_audio()
                     
-                    # Create background (source video fills screen)
+                    # Create background (source video fills screen) - preserve audio
                     target_size = (1080, 1920)  # 9:16 aspect ratio
                     background = self._create_background_for_shorts(source_adjusted, target_size)
                     
-                    # Create Elly overlay
+                    # Create Elly overlay (without audio)
                     elly_overlay = self._create_elly_overlay(elly_adjusted, target_size, elly_size, elly_position)
                     
-                    # Combine videos
+                    # Combine videos - background audio will be preserved
                     final_video = CompositeVideoClip([background, elly_overlay], size=target_size)
+                    
+                    # Ensure original audio is preserved
+                    if has_source_audio and final_video.audio is None:
+                        self.log_activity("🎵 Restoring original audio...")
+                        final_video = final_video.set_audio(source_adjusted.audio)
                     
                     # Export
                     output_path = f"shorts/elly_short_{video_id}.mp4"
@@ -2286,16 +2845,24 @@ This test confirms that:
                     # High quality settings for YouTube Shorts
                     ffmpeg_params = ['-crf', '20', '-maxrate', '3000k', '-bufsize', '6000k']
                     
-                    final_video.write_videofile(
-                        output_path,
-                        codec='libx264',
-                        audio_codec='aac',
-                        fps=30,
-                        preset='medium',
-                        verbose=False,
-                        logger=None,
-                        ffmpeg_params=ffmpeg_params
-                    )
+                    write_params = {
+                        'codec': 'libx264',
+                        'fps': 30,
+                        'preset': 'medium',
+                        'verbose': False,
+                        'logger': None,
+                        'ffmpeg_params': ffmpeg_params
+                    }
+                    
+                    # Add audio settings if audio exists
+                    if final_video.audio is not None:
+                        write_params['audio_codec'] = 'aac'
+                        write_params['audio_bitrate'] = '128k'
+                        self.log_activity("🎵 Writing Elly reaction with original audio")
+                    else:
+                        self.log_activity("🔇 Writing Elly reaction without audio")
+                    
+                    final_video.write_videofile(output_path, **write_params)
                     
                     self.log_activity(f"✅ Elly reaction short created: {output_path}")
                     return output_path
@@ -2373,12 +2940,37 @@ This test confirms that:
         
         return elly_positioned
 
+    def debug_audio_info(self, video_path, stage=""):
+        """Debug function to log audio information"""
+        try:
+            with VideoFileClip(video_path) as video:
+                has_audio = video.audio is not None
+                duration = video.duration
+                size = video.size
+                
+                audio_info = "No audio"
+                if has_audio:
+                    audio_duration = video.audio.duration
+                    audio_info = f"Audio duration: {audio_duration:.2f}s"
+                
+                self.log_activity(f"🔍 {stage} - {os.path.basename(video_path)}")
+                self.log_activity(f"   📊 Video: {duration:.2f}s, {size[0]}x{size[1]}")
+                self.log_activity(f"   🎵 {audio_info}")
+                
+                return has_audio
+        except Exception as e:
+            self.log_activity(f"❌ Audio debug error: {e}")
+            return False
+
     def resize_for_shorts(self, clip):
-        """Resize video for 9:16 format"""
+        """Resize video for 9:16 format with audio preservation"""
         target_width, target_height = 1080, 1920
         current_width, current_height = clip.size
         current_ratio = current_width / current_height
         target_ratio = target_width / target_height
+        
+        # Store original audio
+        original_audio = clip.audio
         
         if current_ratio > target_ratio:
             new_width = int(current_height * target_ratio)
@@ -2393,7 +2985,14 @@ This test confirms that:
             y2 = y_center + new_height // 2
             clip = clip.crop(y1=y1, y2=y2)
         
-        return clip.resize((target_width, target_height))
+        # Resize and ensure audio is preserved
+        resized_clip = clip.resize((target_width, target_height))
+        
+        # Explicitly set audio if it exists
+        if original_audio is not None:
+            resized_clip = resized_clip.set_audio(original_audio)
+        
+        return resized_clip
 
     def authenticate_youtube(self):
         """Authenticate YouTube upload"""
@@ -2520,7 +3119,7 @@ This test confirms that:
             # Download with retry mechanism
             video_path = None
             download_attempts = 0
-            max_download_attempts = 2
+            max_download_attempts = 3  # Increased attempts
             
             while download_attempts < max_download_attempts and not video_path:
                 download_attempts += 1
@@ -2528,8 +3127,9 @@ This test confirms that:
                 video_path = self.download_video(video['url'], video['id'])
                 
                 if not video_path and download_attempts < max_download_attempts:
-                    self.log_activity(f"⏳ Retrying download in 5 seconds...")
-                    time.sleep(5)
+                    wait_time = 5 * download_attempts  # Progressive wait
+                    self.log_activity(f"⏳ Retrying download in {wait_time} seconds...")
+                    time.sleep(wait_time)
             
             if not video_path:
                 self.log_activity(f"❌ Download failed after {max_download_attempts} attempts, skipping...")
