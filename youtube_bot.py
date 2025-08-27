@@ -22,6 +22,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 import yt_dlp
 from moviepy.editor import VideoFileClip
 import requests
@@ -2995,45 +2996,68 @@ This test confirms that:
         return resized_clip
 
     def authenticate_youtube(self):
-        """Authenticate YouTube upload"""
+        """Production-ready YouTube authentication (no browser required)"""
         SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
         creds = None
         token_file = 'credentials/token.pickle'
         
+        # Try to load existing credentials
         if os.path.exists(token_file):
-            with open(token_file, 'rb') as token:
-                creds = pickle.load(token)
+            try:
+                with open(token_file, 'rb') as token:
+                    creds = pickle.load(token)
+            except:
+                creds = None
         
+        # Check if credentials are valid
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 try:
                     creds.refresh(Request())
-                except:
+                except Exception as e:
+                    self.log_activity(f"❌ Token refresh failed: {e}")
                     creds = None
             
+            # If no valid credentials, try to create from environment variables
             if not creds:
-                credentials_info = {
-                    "installed": {
-                        "client_id": self.client_id,
-                        "client_secret": self.client_secret,
-                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                        "token_uri": "https://oauth2.googleapis.com/token",
-                        "redirect_uris": ["http://localhost", "urn:ietf:wg:oauth:2.0:oob"]
-                    }
-                }
+                refresh_token = os.getenv('YOUTUBE_REFRESH_TOKEN')
                 
-                with open('credentials/credentials.json', 'w') as f:
-                    json.dump(credentials_info, f)
-                
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials/credentials.json', SCOPES)
-                creds = flow.run_local_server(port=0)
-            
-            with open(token_file, 'wb') as token:
-                pickle.dump(creds, token)
+                if refresh_token and self.client_id and self.client_secret:
+                    try:
+                        # Create credentials from refresh token
+                        creds = Credentials(
+                            token=None,
+                            refresh_token=refresh_token,
+                            token_uri='https://oauth2.googleapis.com/token',
+                            client_id=self.client_id,
+                            client_secret=self.client_secret,
+                            scopes=SCOPES
+                        )
+                        
+                        # Refresh to get access token
+                        creds.refresh(Request())
+                        
+                        # Save credentials for future use
+                        os.makedirs('credentials', exist_ok=True)
+                        with open(token_file, 'wb') as token:
+                            pickle.dump(creds, token)
+                        
+                        self.log_activity("✅ YouTube authentication successful")
+                        
+                    except Exception as e:
+                        self.log_activity(f"❌ Authentication from refresh token failed: {e}")
+                        return False
+                else:
+                    self.log_activity("❌ No refresh token found in environment variables")
+                    self.log_activity("💡 Add YOUTUBE_REFRESH_TOKEN to your Render environment")
+                    return False
         
-        self.upload_youtube = build('youtube', 'v3', credentials=creds)
-        return True
+        try:
+            self.upload_youtube = build('youtube', 'v3', credentials=creds)
+            return True
+        except Exception as e:
+            self.log_activity(f"❌ YouTube service build failed: {e}")
+            return False
 
     def upload_to_youtube(self, video_path, title, description):
         """Upload video to YouTube"""
