@@ -33,6 +33,101 @@ load_dotenv()
 # Flask app for server health checks and dashboard
 app = Flask(__name__)
 
+# YouTube Authentication Setup
+def get_youtube_credentials():
+    """Get YouTube API credentials with automatic refresh"""
+    creds = None
+    
+    # Check for existing token
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+    
+    # If no valid credentials, get new ones
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                print("✅ Token refreshed successfully")
+            except Exception as e:
+                print(f"❌ Token refresh failed: {e}")
+                creds = None
+        
+        if not creds:
+            # Use environment variables for OAuth
+            client_config = {
+                "installed": {
+                    "client_id": os.getenv('YOUTUBE_CLIENT_ID'),
+                    "client_secret": os.getenv('YOUTUBE_CLIENT_SECRET'),
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob"]
+                }
+            }
+            
+            if not client_config["installed"]["client_id"]:
+                print("❌ Missing YOUTUBE_CLIENT_ID in environment variables")
+                return None
+                
+            flow = InstalledAppFlow.from_client_config(
+                client_config, 
+                ['https://www.googleapis.com/auth/youtube.upload']
+            )
+            
+            # Try to use refresh token from environment
+            refresh_token = os.getenv('YOUTUBE_REFRESH_TOKEN')
+            if refresh_token:
+                try:
+                    token_data = {
+                        'refresh_token': refresh_token,
+                        'token_uri': 'https://oauth2.googleapis.com/token',
+                        'client_id': client_config["installed"]["client_id"],
+                        'client_secret': client_config["installed"]["client_secret"]
+                    }
+                    creds = Credentials.from_authorized_user_info(token_data)
+                    creds.refresh(Request())
+                    print("✅ Authentication successful using refresh token")
+                except Exception as e:
+                    print(f"❌ Refresh token authentication failed: {e}")
+                    return None
+            else:
+                print("❌ No YOUTUBE_REFRESH_TOKEN found in environment variables")
+                print("🔗 Get refresh token from: https://developers.google.com/youtube/v3/quickstart/python")
+                return None
+        
+        # Save credentials for next run
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
+    
+    return creds
+
+def check_environment_setup():
+    """Check if all required environment variables are set"""
+    required_vars = [
+        'YOUTUBE_API_KEY',
+        'YOUTUBE_CLIENT_ID', 
+        'YOUTUBE_CLIENT_SECRET',
+        'YOUTUBE_REFRESH_TOKEN',
+        'GROQ_API_KEY',
+        'TELEGRAM_BOT_TOKEN',
+        'TELEGRAM_CHAT_ID'
+    ]
+    
+    missing_vars = []
+    for var in required_vars:
+        if not os.getenv(var):
+            missing_vars.append(var)
+    
+    if missing_vars:
+        print("❌ Missing environment variables:")
+        for var in missing_vars:
+            print(f"   - {var}")
+        print("\n🔧 Add these to your Render environment variables")
+        return False
+    
+    print("✅ All environment variables configured")
+    return True
+
 # Advanced Professional Dashboard
 ADVANCED_DASHBOARD_HTML = """
 <!DOCTYPE html>
@@ -1431,10 +1526,18 @@ class AutoYouTubeBot:
             print(f"⚠️  Database initialization failed: {e}")
         
         try:
-            # YouTube APIs - only if API key exists
+            # YouTube APIs with authentication
             if self.youtube_api_key:
                 self.youtube = build('youtube', 'v3', developerKey=self.youtube_api_key)
                 print("✅ YouTube API connected")
+                
+                # Setup upload service with OAuth
+                creds = get_youtube_credentials()
+                if creds:
+                    self.upload_youtube = build('youtube', 'v3', credentials=creds)
+                    print("✅ YouTube Upload API authenticated")
+                else:
+                    print("❌ YouTube Upload authentication failed")
             else:
                 print("⚠️  YouTube API key not found")
         except Exception as e:
@@ -3197,8 +3300,18 @@ This test confirms that:
                     return False
         
         try:
-            self.upload_youtube = build('youtube', 'v3', credentials=creds)
-            return True
+            # Use existing authenticated service if available
+            if hasattr(self, 'upload_youtube') and self.upload_youtube:
+                return True
+                
+            # Otherwise get new credentials
+            creds = get_youtube_credentials()
+            if creds:
+                self.upload_youtube = build('youtube', 'v3', credentials=creds)
+                return True
+            else:
+                print("❌ Failed to get YouTube credentials")
+                return False
         except Exception as e:
             self.log_activity(f"❌ YouTube service build failed: {e}")
             return False
@@ -3442,6 +3555,15 @@ def start_bot_background():
 
 if __name__ == "__main__":
     import socket
+    
+    print("🚀 Starting YouTube Automation Bot...")
+    
+    # Check environment setup first
+    if not check_environment_setup():
+        print("❌ Environment setup incomplete. Exiting...")
+        exit(1)
+    
+    print("✅ Environment check passed")
     
     # Check if running on Render
     is_render = os.environ.get('RENDER') or os.environ.get('RENDER_SERVICE_ID')
