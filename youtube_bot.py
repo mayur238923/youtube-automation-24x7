@@ -1566,7 +1566,7 @@ class AutoYouTubeBot:
         
         # Show enhanced features
         print("\n🚀 Enhanced Features Loaded:")
-        print("  ✅ Multiple download methods (yt-dlp + pytube)")
+        print("  ✅ Bot detection bypass enabled")
         print("  ✅ Enhanced error handling & fallbacks")
         if self.elly_reaction_mode:
             print("  ✅ Elly reaction shorts creation")
@@ -2906,48 +2906,38 @@ This test confirms that:
             return None
 
     def download_video(self, url, video_id):
-        """Simple and reliable download method with bot detection bypass"""
-        self.log_activity(f"⬇️ Downloading video: {video_id}")
+        """Bot detection bypass download method"""
+        self.log_activity(f"⬇️ Downloading with bypass: {video_id}")
         
         try:
             filename = f"downloads/{video_id}.mp4"
             
-            # Advanced bot detection bypass configuration
+            # Method 1: Android client bypass
             ydl_opts = {
-                'format': 'best[height<=720][ext=mp4]/best[ext=mp4]/best[height<=480]/mp4/best',
+                'format': 'best[height<=720]',
                 'outtmpl': filename,
                 'quiet': True,
-                'no_warnings': True,
-                'ignoreerrors': True,
-                'retries': 1,
-                'sleep_interval': 2,
-                'max_sleep_interval': 5,
-                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'referer': 'https://www.youtube.com/',
-                'http_headers': {
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'DNT': '1',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1',
-                },
-                'extractor_args': {
-                    'youtube': {
-                        'skip': ['dash', 'hls'],
-                        'player_client': ['android', 'web']
-                    }
-                }
+                'user_agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB) gzip',
+                'extractor_args': {'youtube': {'player_client': ['android']}}
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
             
             if os.path.exists(filename) and os.path.getsize(filename) > 1000:
-                self.log_activity(f"✅ Download successful: {video_id}")
+                self.log_activity(f"✅ Android bypass successful: {video_id}")
                 return filename
-            else:
-                self.log_activity(f"❌ Primary download failed, trying advanced method...")
+            
+            # Method 2: iOS client fallback
+            ydl_opts['user_agent'] = 'com.google.ios.youtube/17.36.4 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)'
+            ydl_opts['extractor_args'] = {'youtube': {'player_client': ['ios']}}
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            
+            if os.path.exists(filename) and os.path.getsize(filename) > 1000:
+                self.log_activity(f"✅ iOS bypass successful: {video_id}")
+                return filename
                 return self.download_video_advanced(url, video_id)
                 
         except Exception as e:
