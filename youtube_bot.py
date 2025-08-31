@@ -1,4 +1,13 @@
-#!/usr/bin/env python3
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/health')
+def health():
+    return "OK", 200
+
+@app.route('/')
+def home():
+    return "YouTube Bot Running", 200
 """
 Fully Autonomous YouTube Bot - No Manual Intervention Required
 - Automatic test upload on start
@@ -1544,8 +1553,9 @@ class AutoYouTubeBot:
             print(f"⚠️  YouTube API connection failed: {e}")
         
         try:
-            # Create directories
-            os.makedirs('downloads', exist_ok=True)
+            # Create directories - Use /tmp for Render
+            self.download_dir = '/tmp/downloads' if os.path.exists('/tmp') else 'downloads'
+            os.makedirs(self.download_dir, exist_ok=True)
             os.makedirs('shorts', exist_ok=True)
             os.makedirs('credentials', exist_ok=True)
             os.makedirs('logs', exist_ok=True)
@@ -2708,7 +2718,7 @@ This test confirms that:
         """Advanced download with multiple strategies"""
         self.log_activity(f"🎯 Advanced download: {video_id}")
         
-        filename = f"downloads/{video_id}.mp4"
+        filename = os.path.join(self.download_dir, f"{video_id}.mp4")
         
         # Advanced strategies with bot detection bypass
         strategies = [
@@ -2888,7 +2898,7 @@ This test confirms that:
             final_video = CompositeVideoClip([background, title_text, info_text])
             
             # Save placeholder
-            placeholder_path = f"downloads/{video_id}_placeholder.mp4"
+            placeholder_path = os.path.join(self.download_dir, f"{video_id}_placeholder.mp4")
             final_video.write_videofile(
                 placeholder_path,
                 fps=24,
@@ -2906,43 +2916,47 @@ This test confirms that:
             return None
 
     def download_video(self, url, video_id):
-        """Bot detection bypass download method"""
-        self.log_activity(f"⬇️ Downloading with bypass: {video_id}")
+        """Download with multiple fallback methods for Render"""
+        self.log_activity(f"⬇️ Downloading: {video_id}")
         
+        # Method 1: Direct requests download
         try:
-            filename = f"downloads/{video_id}.mp4"
-            
-            # Method 1: Android client bypass
-            ydl_opts = {
-                'format': 'best[height<=720]',
-                'outtmpl': filename,
-                'quiet': True,
-                'user_agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB) gzip',
-                'extractor_args': {'youtube': {'player_client': ['android']}}
-            }
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-            
-            if os.path.exists(filename) and os.path.getsize(filename) > 1000:
-                self.log_activity(f"✅ Android bypass successful: {video_id}")
-                return filename
-            
-            # Method 2: iOS client fallback
-            ydl_opts['user_agent'] = 'com.google.ios.youtube/17.36.4 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)'
-            ydl_opts['extractor_args'] = {'youtube': {'player_client': ['ios']}}
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-            
-            if os.path.exists(filename) and os.path.getsize(filename) > 1000:
-                self.log_activity(f"✅ iOS bypass successful: {video_id}")
-                return filename
-                return self.download_video_advanced(url, video_id)
+            import requests
+            response = requests.get(url, stream=True, timeout=30)
+            if response.status_code == 200:
+                filename = f"{video_id}.mp4"
+                filepath = os.path.join(self.download_dir, filename)
                 
+                with open(filepath, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
+                    self.log_activity(f"✅ Direct download success: {filename}")
+                    return filepath
         except Exception as e:
-            self.log_activity(f"❌ Download error: {e}, trying advanced method...")
+            self.log_activity(f"❌ Direct download failed: {e}")
+        
+        # Method 2: Curl fallback
+        try:
+            import subprocess
+            filename = f"{video_id}.mp4"
+            filepath = os.path.join(self.download_dir, filename)
+            cmd = f"curl -L -o '{filepath}' '{url}'"
+            subprocess.run(cmd, shell=True, check=True, timeout=60)
+            
+            if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
+                self.log_activity(f"✅ Curl download success: {filename}")
+                return filepath
+        except Exception as e:
+            self.log_activity(f"❌ Curl download failed: {e}")
+        
+        # Method 3: Advanced download as last resort
+        try:
             return self.download_video_advanced(url, video_id)
+        except Exception as e:
+            self.log_activity(f"❌ All download methods failed: {e}")
+            return None
     
 
     def create_short(self, video_path, video_id):
@@ -3390,7 +3404,7 @@ This test confirms that:
             # Download with retry mechanism
             video_path = None
             download_attempts = 0
-            max_download_attempts = 3  # Increased attempts
+            max_download_attempts = 1  # Single attempt only
             
             while download_attempts < max_download_attempts and not video_path:
                 download_attempts += 1
