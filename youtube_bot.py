@@ -2919,44 +2919,96 @@ This test confirms that:
         """Download with multiple fallback methods for Render"""
         self.log_activity(f"⬇️ Downloading: {video_id}")
         
-        # Method 1: Direct requests download
+        # Method 1: Direct requests with validation
         try:
             import requests
-            response = requests.get(url, stream=True, timeout=30)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'video/mp4,video/*,*/*',
+                'Accept-Encoding': 'identity'
+            }
+            
+            response = requests.get(url, stream=True, timeout=30, headers=headers)
             if response.status_code == 200:
                 filename = f"{video_id}.mp4"
                 filepath = os.path.join(self.download_dir, filename)
                 
                 with open(filepath, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
+                        if chunk:
+                            f.write(chunk)
                 
-                if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
-                    self.log_activity(f"✅ Direct download success: {filename}")
-                    return filepath
+                if os.path.exists(filepath) and os.path.getsize(filepath) > 10000:
+                    # Quick validation
+                    try:
+                        with open(filepath, 'rb') as f:
+                            header = f.read(8)
+                            # Check for valid MP4 header
+                            if b'ftyp' in header or header.startswith(b'\x00\x00\x00'):
+                                self.log_activity(f"✅ Direct download success: {filename}")
+                                return filepath
+                    except:
+                        pass
+                    
+                    # File seems invalid
+                    os.remove(filepath)
+                    self.log_activity(f"❌ Invalid file format: {filename}")
+                    
         except Exception as e:
             self.log_activity(f"❌ Direct download failed: {e}")
         
-        # Method 2: Curl fallback
+        # Method 2: Curl with better headers
         try:
             import subprocess
             filename = f"{video_id}.mp4"
             filepath = os.path.join(self.download_dir, filename)
-            cmd = f"curl -L -o '{filepath}' '{url}'"
-            subprocess.run(cmd, shell=True, check=True, timeout=60)
             
-            if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
-                self.log_activity(f"✅ Curl download success: {filename}")
-                return filepath
+            # Add proper headers and validation
+            cmd = [
+                'curl', '-L', '-s', '--fail',
+                '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                '-H', 'Accept: video/mp4,video/*,*/*',
+                '--max-filesize', '50M',
+                '--connect-timeout', '30',
+                '-o', filepath,
+                url
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, timeout=60)
+            
+            if result.returncode == 0 and os.path.exists(filepath):
+                file_size = os.path.getsize(filepath)
+                if file_size > 10000:  # At least 10KB
+                    # Validate file format
+                    try:
+                        import subprocess
+                        check_cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', filepath]
+                        probe_result = subprocess.run(check_cmd, capture_output=True, timeout=10)
+                        if probe_result.returncode == 0:
+                            self.log_activity(f"✅ Curl download success: {filename}")
+                            return filepath
+                    except:
+                        pass
+                
+                # File invalid, remove it
+                os.remove(filepath)
+                self.log_activity(f"❌ Downloaded file is invalid: {filename}")
+            
         except Exception as e:
             self.log_activity(f"❌ Curl download failed: {e}")
         
-        # Method 3: Advanced download as last resort
+        # Method 3: Skip invalid URLs
+        self.log_activity(f"❌ URL might be invalid or expired: {url[:50]}...")
+        
+        # Try to get fresh URL from API
         try:
-            return self.download_video_advanced(url, video_id)
-        except Exception as e:
-            self.log_activity(f"❌ All download methods failed: {e}")
-            return None
+            video_info = self.get_video_info_from_api(video_id)
+            if video_info:
+                self.log_activity(f"ℹ️ Video exists but download blocked: {video_info.get('title', 'Unknown')[:30]}")
+        except:
+            pass
+            
+        return None
     
 
     def create_short(self, video_path, video_id):
