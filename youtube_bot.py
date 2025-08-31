@@ -2718,6 +2718,9 @@ This test confirms that:
         """Advanced download with multiple strategies"""
         self.log_activity(f"🎯 Advanced download: {video_id}")
         
+        # Add rate limiting - wait between downloads
+        time.sleep(random.randint(15, 45))
+        
         filename = os.path.join(self.download_dir, f"{video_id}.mp4")
         
         # Advanced strategies with bot detection bypass
@@ -2793,20 +2796,10 @@ This test confirms that:
                 ydl_opts = {
                     'format': strategy['format'],
                     'outtmpl': filename,
+                    'sleep_interval': random.randint(3, 8),
+                    'max_sleep_interval': 15,
                     'retries': 2,
-                    'fragment_retries': 2,
-                    'sleep_interval': 2,
-                    'max_sleep_interval': 5,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'referer': 'https://www.youtube.com/',
-                    'http_headers': {
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'Accept-Encoding': 'gzip, deflate, br',
-                        'DNT': '1',
-                        'Connection': 'keep-alive',
-                        'Upgrade-Insecure-Requests': '1',
-                    },
+                    'user_agent': 'Mozilla/5.0 (Android 12; Mobile; rv:109.0) Gecko/117.0 Firefox/117.0',
                     **strategy['opts']
                 }
                 
@@ -2821,7 +2814,18 @@ This test confirms that:
                     self.log_activity(f"❌ {strategy['name']} failed - no file created")
                     
             except Exception as e:
-                self.log_activity(f"❌ {strategy['name']} error: {str(e)[:100]}")
+                error_msg = str(e)
+                if "Sign in to confirm you're not a bot" in error_msg:
+                    self.log_activity(f"🤖 ❌ Bot detection triggered")
+                    time.sleep(random.randint(30, 60))  # Wait longer
+                elif "Video unavailable" in error_msg:
+                    self.log_activity(f"🚫 ❌ Video unavailable or private")
+                    break  # No point trying other strategies
+                elif "Private video" in error_msg:
+                    self.log_activity(f"🔒 ❌ Video is private")
+                    break
+                else:
+                    self.log_activity(f"❌ {strategy['name']} error: {error_msg[:100]}")
                 continue
         
         self.log_activity(f"❌ All download strategies failed: {video_id}")
