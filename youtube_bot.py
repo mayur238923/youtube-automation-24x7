@@ -1500,8 +1500,50 @@ def refresh_all_stats():
         return jsonify({"error": str(e)})
 
 class AutoYouTubeBot:
+    def setup_cookies(self):
+        """Setup cookies for better download success"""
+        try:
+            # Try to extract cookies from browser
+            import subprocess
+            cookie_file = os.path.join(self.download_dir, 'cookies.txt')
+            
+            # Try different browsers
+            browsers = ['chrome', 'firefox', 'edge', 'safari']
+            for browser in browsers:
+                try:
+                    cmd = ['yt-dlp', '--cookies-from-browser', browser, '--cookies', cookie_file, '--print', 'cookies', 'https://youtube.com']
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                    if result.returncode == 0 and os.path.exists(cookie_file):
+                        self.log_activity(f"✅ Cookies extracted from {browser}")
+                        return cookie_file
+                except:
+                    continue
+            
+            self.log_activity("⚠️ No browser cookies found")
+            return None
+        except Exception as e:
+            self.log_activity(f"❌ Cookie setup failed: {e}")
+            return None
+
+    def update_ytdlp(self):
+        """Update yt-dlp to latest version"""
+        try:
+            import subprocess
+            print("🔄 Updating yt-dlp...")
+            result = subprocess.run(['pip', 'install', '--upgrade', 'yt-dlp'], 
+                                  capture_output=True, text=True, timeout=60)
+            if result.returncode == 0:
+                print("✅ yt-dlp updated successfully")
+            else:
+                print(f"⚠️ yt-dlp update warning: {result.stderr}")
+        except Exception as e:
+            print(f"❌ Failed to update yt-dlp: {e}")
+
     def __init__(self):
         print("🔧 Initializing YouTube Bot...")
+        
+        # Update yt-dlp first
+        self.update_ytdlp()
         
         # API Keys
         self.youtube_api_key = os.getenv('YOUTUBE_API_KEY')
@@ -2723,6 +2765,9 @@ This test confirms that:
         
         filename = os.path.join(self.download_dir, f"{video_id}.mp4")
         
+        # Setup cookies for better success rate
+        cookie_file = self.setup_cookies()
+        
         # Advanced strategies with bot detection bypass
         strategies = [
             {
@@ -2751,41 +2796,60 @@ This test confirms that:
                     }
                 }
             },
+        strategies = [
             {
-                'name': 'Web Client',
+                'name': 'Mobile Client',
+                'format': 'best[height<=720]',
+                'opts': {
+                    'quiet': True, 
+                    'no_warnings': True,
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['android', 'android_creator'],
+                            'skip': ['dash', 'hls']
+                        }
+                    }
+                }
+            },
+            {
+                'name': 'iOS Client',
                 'format': 'best[height<=480]',
                 'opts': {
                     'quiet': True, 
                     'no_warnings': True,
                     'extractor_args': {
                         'youtube': {
-                            'player_client': ['web', 'web_creator']
+                            'player_client': ['ios', 'ios_music'],
+                            'skip': ['dash']
                         }
                     }
                 }
             },
             {
-                'name': 'Alternative Format',
-                'format': 'mp4',
+                'name': 'TV Client',
+                'format': 'mp4[height<=360]',
                 'opts': {
                     'quiet': True, 
                     'no_warnings': True,
                     'extractor_args': {
                         'youtube': {
-                            'player_client': ['android_music']
+                            'player_client': ['tv_embedded']
                         }
                     }
                 }
             },
             {
-                'name': 'Fallback Quality',
-                'format': 'best',
-                'opts': {'quiet': True, 'no_warnings': True}
-            },
-            {
-                'name': 'Last Resort',
-                'format': 'worst',
-                'opts': {'quiet': True, 'no_warnings': True}
+                'name': 'Web Embedded',
+                'format': 'worst[ext=mp4]',
+                'opts': {
+                    'quiet': True, 
+                    'no_warnings': True,
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['web_embedded']
+                        }
+                    }
+                }
             }
         ]
         
@@ -2796,10 +2860,25 @@ This test confirms that:
                 ydl_opts = {
                     'format': strategy['format'],
                     'outtmpl': filename,
-                    'sleep_interval': random.randint(3, 8),
-                    'max_sleep_interval': 15,
-                    'retries': 2,
-                    'user_agent': 'Mozilla/5.0 (Android 12; Mobile; rv:109.0) Gecko/117.0 Firefox/117.0',
+                    'sleep_interval': random.randint(5, 12),
+                    'max_sleep_interval': 20,
+                    'retries': 3,
+                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'cookiefile': cookie_file if cookie_file else None,
+                    'extract_flat': False,
+                    'writesubtitles': False,
+                    'writeautomaticsub': False,
+                    'ignoreerrors': True,
+                    'no_check_certificate': True,
+                    'prefer_insecure': True,
+                    'http_headers': {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-us,en;q=0.5',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'DNT': '1',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1',
+                    },
                     **strategy['opts']
                 }
                 
@@ -2815,15 +2894,22 @@ This test confirms that:
                     
             except Exception as e:
                 error_msg = str(e)
-                if "Sign in to confirm you're not a bot" in error_msg:
-                    self.log_activity(f"🤖 ❌ Bot detection triggered")
-                    time.sleep(random.randint(30, 60))  # Wait longer
-                elif "Video unavailable" in error_msg:
-                    self.log_activity(f"🚫 ❌ Video unavailable or private")
-                    break  # No point trying other strategies
-                elif "Private video" in error_msg:
-                    self.log_activity(f"🔒 ❌ Video is private")
-                    break
+                if any(phrase in error_msg.lower() for phrase in [
+                    "sign in to confirm", "bot", "blocked", "unavailable", 
+                    "private", "restricted", "age-restricted", "not available"
+                ]):
+                    if "bot" in error_msg.lower() or "blocked" in error_msg.lower():
+                        self.log_activity(f"🤖 ❌ Download blocked: {strategy['name']}")
+                        # Try with longer delay
+                        time.sleep(random.randint(45, 90))
+                    elif "private" in error_msg.lower():
+                        self.log_activity(f"🔒 ❌ Video is private: {video_id}")
+                        break  # No point trying other strategies
+                    elif "unavailable" in error_msg.lower():
+                        self.log_activity(f"🚫 ❌ Video unavailable: {video_id}")
+                        break
+                    else:
+                        self.log_activity(f"⚠️ ❌ Access restricted: {strategy['name']}")
                 else:
                     self.log_activity(f"❌ {strategy['name']} error: {error_msg[:100]}")
                 continue
