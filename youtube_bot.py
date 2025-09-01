@@ -3486,7 +3486,7 @@ This test confirms that:
                 pass
 
     def process_scheduled_upload(self, category='tech'):
-        """Process scheduled upload"""
+        """Process scheduled upload - API ONLY MODE"""
         if not self.bot_active:
             return False
         
@@ -3496,96 +3496,28 @@ This test confirms that:
             self.log_activity("Daily limit reached (10 videos)")
             return False
         
-        self.log_activity(f"Processing scheduled {category} upload...")
+        self.log_activity(f"📊 API-only mode: Fetching {category} data...")
         
-        category_id = '28' if category == 'tech' else '24'
-        videos = self.get_safe_videos(category_id, max_results=10)
+        # Get real YouTube data without downloading
+        videos = self.get_real_youtube_data()
+        if not videos:
+            self.log_activity("❌ No YouTube data available")
+            return False
         
-        successful_uploads = 0
-        attempted_videos = 0
-        max_attempts = min(len(videos), 10)  # Try maximum 10 videos
+        # Filter by category
+        category_videos = [v for v in videos if v.get('category') == category][:5]
         
-        for video in videos:
-            if attempted_videos >= max_attempts:
-                break
-                
-            attempted_videos += 1
-            self.log_activity(f"🎯 Attempting video {attempted_videos}/{max_attempts}: {video['title'][:40]}...")
-            
+        for video in category_videos:
             if self.check_duplicate(video):
-                self.log_activity(f"⏭️ Skipping duplicate: {video['id']}")
                 continue
                 
-            # Download with retry mechanism
-            video_path = None
-            download_attempts = 0
-            max_download_attempts = 1  # Single attempt only
+            # Save video data without downloading
+            self.save_video_with_stats(video)
+            self.save_processed_video(video)
+            self.update_stats(category)
             
-            while download_attempts < max_download_attempts and not video_path:
-                download_attempts += 1
-                self.log_activity(f"📥 Download attempt {download_attempts}/{max_download_attempts}")
-                video_path = self.download_video(video['url'], video['id'])
-                
-                if not video_path and download_attempts < max_download_attempts:
-                    wait_time = 5 * download_attempts  # Progressive wait
-                    self.log_activity(f"⏳ Retrying download in {wait_time} seconds...")
-                    time.sleep(wait_time)
-            
-            if not video_path:
-                self.log_activity(f"❌ Download failed after {max_download_attempts} attempts, skipping...")
-                continue
-                
-            # Create short (with Elly reaction if enabled)
-            if self.elly_reaction_mode and random.random() < self.elly_reaction_chance:
-                self.log_activity(f"🎬 Creating Elly reaction short...")
-                short_path = self.create_elly_reaction_short(
-                    video_path, 
-                    video['id'],
-                    elly_size=random.uniform(0.20, 0.30),  # Random size between 20-30%
-                    elly_position=random.choice(["top-right", "top-left", "bottom-right"])
-                )
-            else:
-                self.log_activity(f"📹 Creating regular short...")
-                short_path = self.create_short(video_path, video['id'])
-            
-            if not short_path:
-                self.log_activity(f"❌ Short creation failed, skipping...")
-                self.cleanup(video_path)
-                continue
-                
-            # Generate content
-            title = self.generate_advanced_title(video, category)
-            description = self.generate_advanced_description(video, title, category)
-            
-            # Upload
-            self.log_activity(f"📤 Uploading: {title[:40]}...")
-            upload_url = self.upload_to_youtube(short_path, title, description)
-            
-            if upload_url and upload_url != "UPLOAD_LIMIT_EXCEEDED":
-                # Save and update stats
-                self.save_processed_video(video)
-                self.save_uploaded_video(title, description, upload_url, category)
-                self.update_stats(category)
-                
-                successful_uploads += 1
-                self.log_activity(f"🎉 {category.upper()} uploaded successfully!")
-                self.log_activity(f"📺 URL: {upload_url}")
-                
-                # Cleanup
-                self.cleanup(video_path, short_path)
-                return True
-            elif upload_url == "UPLOAD_LIMIT_EXCEEDED":
-                self.log_activity(f"⚠️ Upload limit exceeded, stopping attempts")
-                self.cleanup(video_path, short_path)
-                break
-            else:
-                self.log_activity(f"❌ Upload failed, trying next video...")
-                self.cleanup(video_path, short_path)
-        
-        if successful_uploads == 0:
-            self.log_activity(f"❌ No successful uploads from {attempted_videos} attempts")
-        
-        return successful_uploads > 0
+            self.log_activity(f"✅ {category.upper()} data saved: {video['title'][:40]}...")
+            return True
         
         return False
 
