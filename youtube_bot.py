@@ -2771,33 +2771,6 @@ This test confirms that:
         # Advanced strategies with bot detection bypass
         strategies = [
             {
-                'name': 'Android Client',
-                'format': 'best[height<=720][ext=mp4]',
-                'opts': {
-                    'quiet': True, 
-                    'no_warnings': True,
-                    'extractor_args': {
-                        'youtube': {
-                            'player_client': ['android', 'android_creator']
-                        }
-                    }
-                }
-            },
-            {
-                'name': 'iOS Client',
-                'format': 'best[ext=mp4]',
-                'opts': {
-                    'quiet': True, 
-                    'no_warnings': True,
-                    'extractor_args': {
-                        'youtube': {
-                            'player_client': ['ios', 'android_vr']
-                        }
-                    }
-                }
-            },
-        strategies = [
-            {
                 'name': 'Mobile Client',
                 'format': 'best[height<=720]',
                 'opts': {
