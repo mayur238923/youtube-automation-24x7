@@ -1,40 +1,27 @@
+# Termux Compatible Requirements
+
 # Core Dependencies
 google-api-python-client==2.88.0
 google-auth-oauthlib==1.0.0
 google-auth-httplib2==0.1.0
-google-oauth2-tool==0.0.3
-
-# Web Framework
-flask==2.3.2
 requests==2.31.0
+python-dotenv==1.0.0
 
-# Video Processing
-moviepy==1.0.3
+# Web Framework (lightweight for Termux)
+flask==2.3.2
+
+# Video Processing (Termux compatible versions)
 yt-dlp>=2024.1.0
-opencv-python==4.8.1.78
-numpy>=1.24.0
-Pillow>=10.2.0
-
-# Audio Processing
-pydub>=0.25.1
+Pillow>=9.0.0
 
 # Telegram Bot
 python-telegram-bot==20.3
 
-# AI/ML
+# AI/ML (lightweight)
 groq==0.4.2
 
 # Utilities
-python-dotenv==1.0.0
 schedule==1.2.0
-psutil>=5.9.0
 
-# System Monitoring
-psutil>=5.9.0
-
-# Database
-sqlite3
-
-# Development Tools
-pytest>=7.0.0
-black>=23.0.0
+# Note: MoviePy and OpenCV may have issues in Termux
+# Use alternative lightweight video processing if needed
