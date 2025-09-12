@@ -1560,14 +1560,12 @@ class AutoYouTubeBot:
         self.upload_youtube = None
         self.db = None
         
-        # Elly reaction mode configuration
-        self.elly_reaction_mode = os.path.exists("video/elly.mp4")
-        self.elly_reaction_chance = 0.7  # 70% chance to create Elly reaction
+        # Elly reaction mode configuration - ALWAYS ENABLED
+        self.elly_reaction_mode = True  # Force enable for reaction channel
+        self.elly_reaction_chance = 1.0  # 100% chance - always create reactions
         
-        if self.elly_reaction_mode:
-            print("🎬 Elly Reaction Mode: ENABLED")
-        else:
-            print("📹 Regular Shorts Mode: ENABLED")
+        print("🎬 REACTION SHORTS CHANNEL MODE: ENABLED")
+        print("👩 Elly will react to ALL shorts automatically")
         
         try:
             # Initialize database for better tracking
@@ -1633,80 +1631,104 @@ class AutoYouTubeBot:
             print("📝 Logging system not available")
 
     def get_real_youtube_data(self):
-        """Get real YouTube trending videos with live stats - Enhanced Version"""
+        """Get ONLY YouTube Shorts for reaction channel"""
         try:
             if not self.youtube:
                 return []
             
             videos_data = []
-            categories = [
-                {'id': '28', 'name': 'tech'},      # Science & Technology
-                {'id': '24', 'name': 'entertainment'}, # Entertainment
-                {'id': '22', 'name': 'entertainment'}, # People & Blogs
-                {'id': '23', 'name': 'entertainment'}  # Comedy
+            
+            # Search specifically for shorts
+            search_queries = [
+                'shorts viral trending',
+                'shorts funny moments', 
+                'shorts entertainment',
+                'shorts tech tips',
+                'shorts reaction worthy'
             ]
             
-            for category in categories:
+            for query in search_queries:
                 try:
-                    # Get trending videos for this category
-                    request = self.youtube.videos().list(
-                        part='snippet,statistics,contentDetails',
-                        chart='mostPopular',
-                        regionCode='US',
-                        maxResults=8,
-                        videoCategoryId=category['id']
+                    # Search for shorts
+                    search_request = self.youtube.search().list(
+                        q=query,
+                        part='snippet',
+                        type='video',
+                        videoDuration='short',  # Only shorts
+                        order='relevance',
+                        maxResults=10,
+                        regionCode='US'
                     )
                     
-                    response = request.execute()
+                    search_response = search_request.execute()
                     
-                    for item in response.get('items', []):
-                        # Enhanced video data with real-time stats
-                        video_data = {
-                            'id': item['id'],
-                            'video_id': item['id'],
-                            'title': item['snippet']['title'],
-                            'description': self.truncate_description(item['snippet']['description']),
-                            'upload_date': item['snippet']['publishedAt'],
-                            'youtube_url': f"https://www.youtube.com/watch?v={item['id']}",
-                            'thumbnail': item['snippet']['thumbnails'].get('medium', {}).get('url', ''),
-                            'channel': item['snippet']['channelTitle'],
-                            'category': category['name'],
-                            'views': int(item['statistics'].get('viewCount', 0)),
-                            'likes': int(item['statistics'].get('likeCount', 0)),
-                            'comments': int(item['statistics'].get('commentCount', 0)),
-                            'duration': item['contentDetails']['duration'],
-                            'live_stats': True,
-                            'last_updated': datetime.now().isoformat(),
-                            'tags': item['snippet'].get('tags', [])[:5],  # First 5 tags
-                            'language': item['snippet'].get('defaultLanguage', 'en'),
-                            'definition': item['contentDetails'].get('definition', 'hd')
-                        }
+                    for item in search_response.get('items', []):
+                        video_id = item['id']['videoId']
                         
-                        # Additional metadata
-                        video_data['engagement_rate'] = self.calculate_engagement_rate(video_data)
-                        video_data['trending_score'] = self.calculate_trending_score(video_data)
+                        # Get detailed video info
+                        video_request = self.youtube.videos().list(
+                            part='snippet,statistics,contentDetails',
+                            id=video_id
+                        )
                         
-                        videos_data.append(video_data)
+                        video_response = video_request.execute()
                         
+                        if video_response['items']:
+                            video = video_response['items'][0]
+                            duration = video['contentDetails']['duration']
+                            duration_seconds = self.parse_duration(duration)
+                            
+                            # Only include shorts (under 60 seconds)
+                            if duration_seconds <= 60:
+                                video_data = {
+                                    'id': video_id,
+                                    'video_id': video_id,
+                                    'title': video['snippet']['title'],
+                                    'description': self.truncate_description(video['snippet']['description']),
+                                    'upload_date': video['snippet']['publishedAt'],
+                                    'youtube_url': f"https://www.youtube.com/watch?v={video_id}",
+                                    'thumbnail': video['snippet']['thumbnails'].get('medium', {}).get('url', ''),
+                                    'channel': video['snippet']['channelTitle'],
+                                    'category': 'shorts',  # All are shorts for reactions
+                                    'views': int(video['statistics'].get('viewCount', 0)),
+                                    'likes': int(video['statistics'].get('likeCount', 0)),
+                                    'comments': int(video['statistics'].get('commentCount', 0)),
+                                    'duration': duration,
+                                    'duration_seconds': duration_seconds,
+                                    'live_stats': True,
+                                    'last_updated': datetime.now().isoformat(),
+                                    'tags': video['snippet'].get('tags', [])[:5],
+                                    'language': video['snippet'].get('defaultLanguage', 'en'),
+                                    'definition': video['contentDetails'].get('definition', 'hd')
+                                }
+                                videos_data.append(video_data)
+                
                 except Exception as e:
-                    self.log_activity(f"Error fetching category {category['id']}: {e}")
+                    self.log_activity(f"⚠️ Error in search query '{query}': {e}")
                     continue
             
-            # Sort by trending score and return top videos
-            videos_data.sort(key=lambda x: x.get('trending_score', 0), reverse=True)
+            # Remove duplicates
+            unique_videos = []
+            seen_ids = set()
+            for video in videos_data:
+                if video['id'] not in seen_ids:
+                    unique_videos.append(video)
+                    seen_ids.add(video['id'])
             
-            # Limit to top 20 videos
-            final_videos = videos_data[:20]
-            
-            self.log_activity(f"✅ Fetched {len(final_videos)} real YouTube videos with live stats")
-            
-            return final_videos
+            self.log_activity(f"✅ Found {len(unique_videos)} shorts for Elly reactions")
+            return unique_videos
             
         except Exception as e:
-            self.log_activity(f"Error getting real YouTube data: {e}")
+            self.log_activity(f"❌ Error fetching shorts: {e}")
             return []
 
     def truncate_description(self, description):
+        """Truncate description to reasonable length"""
+        if not description:
+            return "Amazing content!"
+        return description[:200] + "..." if len(description) > 200 else description
+
+    def get_category_name(self, category_id):
         """Truncate description to reasonable length"""
         if len(description) > 300:
             return description[:297] + "..."
@@ -3116,6 +3138,7 @@ This test confirms that:
                     self.log_activity(f"🎵 Audio restored: {'Yes' if resized_clip.audio is not None else 'No'}")
                 
                 output_path = f"shorts/short_{video_id}.mp4"
+                os.makedirs("shorts", exist_ok=True)  # Ensure directory exists
                 
                 # Write with explicit audio settings
                 write_params = {
@@ -3207,6 +3230,7 @@ This test confirms that:
                         final_video = final_video.set_audio(source_adjusted.audio)
                     
                     # Export
+                    os.makedirs("shorts", exist_ok=True)  # Ensure directory exists
                     output_path = f"shorts/elly_short_{video_id}.mp4"
                     
                     # High quality settings for YouTube Shorts
@@ -3361,6 +3385,41 @@ This test confirms that:
         
         return resized_clip
 
+    def download_video_enhanced(self, video_id):
+        """Download video using yt-dlp"""
+        try:
+            output_path = os.path.join(self.download_dir, f"{video_id}.%(ext)s")
+            
+            ydl_opts = {
+                'format': 'best[height<=720]',
+                'outtmpl': output_path,
+                'quiet': True,
+                'no_warnings': True,
+            }
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
+            
+            # Find the downloaded file
+            for ext in ['mp4', 'webm', 'mkv']:
+                file_path = os.path.join(self.download_dir, f"{video_id}.{ext}")
+                if os.path.exists(file_path):
+                    return file_path
+            
+            return None
+        except Exception as e:
+            self.log_activity(f"Download error: {e}")
+            return None
+
+    def generate_description(self, video_data, category):
+        """Generate description for video"""
+        return f"""🎬 {video_data.get('title', 'Amazing Video')}
+
+📊 Category: {category.title()}
+🔥 Trending content curated by AI
+
+#shorts #viral #trending #{category}"""
+
     def authenticate_youtube(self):
         """Production-ready YouTube authentication (no browser required)"""
         SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
@@ -3485,8 +3544,8 @@ This test confirms that:
             except:
                 pass
 
-    def process_scheduled_upload(self, category='tech'):
-        """Process scheduled upload - API ONLY MODE"""
+    def process_scheduled_upload(self, category='shorts'):
+        """Process scheduled upload with ELLY REACTION SHORTS"""
         if not self.bot_active:
             return False
         
@@ -3496,28 +3555,67 @@ This test confirms that:
             self.log_activity("Daily limit reached (10 videos)")
             return False
         
-        self.log_activity(f"📊 API-only mode: Fetching {category} data...")
+        self.log_activity(f"🎬 Creating Elly reaction short...")
         
-        # Get real YouTube data without downloading
+        # Get shorts data
         videos = self.get_real_youtube_data()
         if not videos:
-            self.log_activity("❌ No YouTube data available")
+            self.log_activity("❌ No shorts available")
             return False
         
-        # Filter by category
-        category_videos = [v for v in videos if v.get('category') == category][:5]
-        
-        for video in category_videos:
+        for video in videos:
             if self.check_duplicate(video):
                 continue
-                
-            # Save video data without downloading
-            self.save_video_with_stats(video)
-            self.save_processed_video(video)
-            self.update_stats(category)
             
-            self.log_activity(f"✅ {category.upper()} data saved: {video['title'][:40]}...")
-            return True
+            # Try to download and create reaction
+            try:
+                original_video_path = self.download_video_enhanced(video['id'])
+                if original_video_path and os.path.exists(original_video_path):
+                    
+                    # Create Elly reaction short
+                    reaction_video_path = self.create_elly_reaction_short(original_video_path, video['id'])
+                    
+                    if reaction_video_path and os.path.exists(reaction_video_path):
+                        # Generate reaction title and description
+                        title = f"Elly Reacts to {video['title'][:30]}... 😱🔥"
+                        description = f"""🎬 Elly's Reaction to: {video['title']}
+
+👩 Watch Elly's genuine reaction to this viral short!
+🔥 Original by: {video['channel']}
+
+#EllyReacts #Reaction #Shorts #Viral #Trending"""
+                        
+                        # Upload reaction to YouTube
+                        upload_url = self.upload_to_youtube(reaction_video_path, title, description)
+                        
+                        if upload_url and upload_url != "UPLOAD_LIMIT_EXCEEDED":
+                            # Save successful upload
+                            video['youtube_url'] = upload_url
+                            video['title'] = title
+                            video['description'] = description
+                            video['reaction_created'] = True
+                            self.save_video_with_stats(video)
+                            self.save_processed_video(video)
+                            self.update_stats('reaction')
+                            
+                            self.log_activity(f"✅ ELLY REACTION UPLOADED: {title[:40]}...")
+                            self.log_activity(f"📺 URL: {upload_url}")
+                            
+                            # Clean up
+                            self.cleanup(original_video_path, reaction_video_path)
+                            return True
+                        elif upload_url == "UPLOAD_LIMIT_EXCEEDED":
+                            self.log_activity("⚠️ Upload limit exceeded - stopping uploads")
+                            return False
+                        else:
+                            self.log_activity(f"❌ Upload failed for reaction: {title[:40]}...")
+                    else:
+                        self.log_activity(f"❌ Reaction creation failed for: {video['title'][:40]}...")
+                else:
+                    self.log_activity(f"❌ Download failed for: {video['title'][:40]}...")
+            except Exception as e:
+                self.log_activity(f"❌ Error processing reaction: {e}")
+                continue
         
         return False
 
@@ -3530,23 +3628,18 @@ This test confirms that:
         """Run bot 24/7 without manual intervention"""
         self.log_activity("🚀 Starting 24/7 autonomous operation")
         
-        # Test enhanced features first
-        self.test_enhanced_features()
+        # Skip test upload - start direct video uploads immediately
+        self.test_upload_success = True
+        self.bot_active = True
+        self.log_activity("✅ Bot activated - uploading real videos directly")
         
-        # Perform test upload first
-        if not self.test_upload_success:
-            success = self.automatic_test_upload()
-            if not success:
-                # Retry every 30 minutes until successful
-                while not self.test_upload_success:
-                    self.log_activity("Retrying test upload in 30 minutes...")
-                    time.sleep(1800)  # 30 minutes
-                    self.automatic_test_upload()
+        # Immediate first reaction upload
+        self.log_activity("🎬 Creating first Elly reaction short...")
+        self.process_scheduled_upload('shorts')
         
-        # Schedule times (IST)
+        # Schedule times for reaction shorts
         schedule_times = {
-            'tech': ['08:00', '12:00', '16:00', '20:00', '23:00'],
-            'entertainment': ['10:00', '14:00', '18:00', '21:00', '23:30']
+            'shorts': ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']
         }
         
         self.log_activity("📅 Schedule configured - Bot running autonomously")
@@ -3597,6 +3690,8 @@ bot_instance = None
 
 def start_bot_background():
     """Start bot in background thread for Render"""
+def start_bot_background():
+    """Start bot in background thread"""
     try:
         if bot_instance and hasattr(bot_instance, 'run_24x7'):
             print("🤖 Starting autonomous bot in background...")
@@ -3636,16 +3731,14 @@ if __name__ == "__main__":
         bot_instance = AutoYouTubeBot()
         print("✅ Bot instance created successfully")
         
-        # Start bot in background thread and run test upload
+        # Start bot in background thread - NO TEST UPLOAD
         if bot_instance:
-            # Run test upload immediately
-            print("🧪 Running test upload...")
-            bot_instance.automatic_test_upload()
-            
-            # Start background thread if API keys available
-            if not is_render or bot_instance.youtube_api_key:
+            if bot_instance.youtube_api_key and bot_instance.client_id:
+                print("🚀 Starting bot with direct video uploads")
                 bot_thread = threading.Thread(target=start_bot_background, daemon=True)
                 bot_thread.start()
+            else:
+                print("⚠️ Missing API credentials - dashboard only mode")
             
     except Exception as e:
         print(f"⚠️  Bot initialization error: {e}")
