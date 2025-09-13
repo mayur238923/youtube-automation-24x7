@@ -2671,7 +2671,7 @@ This test confirms that:
         """Get safe trending videos with strict filtering"""
         try:
             category_name = "Tech" if category_id == '28' else "Entertainment"
-            regions = ['US', 'IN', 'GB', 'CA', 'AU']
+            regions = ['US', 'GB', 'CA', 'AU', 'DE', 'FR', 'JP', 'KR', 'SG']
             all_videos = []
             
             for region in regions:
@@ -2735,13 +2735,33 @@ This test confirms that:
 
     def is_copyright_safe(self, video_data):
         """Enhanced copyright safety check"""
-        # Extensive copyright filtering
+        # Enhanced copyright filtering - International focus
         danger_keywords = [
-            'official', 'vevo', 'music', 'song', 'album', 'records',
-            'trailer', 'movie', 'film', 'netflix', 'disney', 'hbo',
-            'sports', 'nfl', 'nba', 'fifa', 'match', 'game highlights',
-            'news', 'breaking', 'live', 'concert', 'performance',
-            'premium', 'exclusive', 'copyrighted', 'licensed'
+            # Music & Entertainment
+            'official', 'vevo', 'music video', 'song', 'album', 'records', 'soundtrack',
+            'mv', 'lyric', 'lyrics', 'audio', 'single', 'ep', 'remix', 'cover',
+            
+            # Movies & TV
+            'trailer', 'movie', 'film', 'cinema', 'netflix', 'disney', 'hbo', 'amazon prime',
+            'marvel', 'dc comics', 'warner bros', 'universal', 'paramount', 'sony pictures',
+            'tv show', 'episode', 'season', 'series', 'full movie', 'watch online',
+            
+            # Sports & News
+            'nfl', 'nba', 'fifa', 'premier league', 'champions league', 'olympics',
+            'match', 'game highlights', 'live match', 'espn', 'sky sports',
+            'news', 'breaking news', 'cnn', 'bbc', 'fox news', 'live stream',
+            
+            # Brands & Copyright
+            'coca cola', 'pepsi', 'mcdonalds', 'apple', 'samsung', 'nike', 'adidas',
+            'premium', 'exclusive', 'copyrighted', 'licensed', 'all rights reserved',
+            'copyright', '©', '®', '™', 'trademark',
+            
+            # Gaming (Copyrighted)
+            'nintendo', 'playstation', 'xbox', 'fortnite', 'minecraft', 'roblox',
+            'call of duty', 'fifa game', 'gta', 'pokemon',
+            
+            # Avoid These Channels
+            'late night', 'talk show', 'comedy central', 'snl', 'tonight show'
         ]
         
         text = f"{video_data['title']} {video_data['channel']}".lower()
@@ -2751,22 +2771,39 @@ This test confirms that:
                 self.log_activity(f"🚫 Blocked by keyword '{keyword}': {video_data['title'][:30]}...")
                 return False
         
-        # Check channel name patterns
-        if len(video_data['channel']) < 5:
+        # Enhanced channel safety checks
+        channel_name = video_data['channel'].lower()
+        
+        # Block channels with suspicious patterns
+        suspicious_channel_patterns = [
+            'official', 'vevo', 'records', 'entertainment', 'studios', 'productions',
+            'network', 'media', 'broadcasting', 'corporation', 'limited', 'ltd',
+            'inc', 'llc', 'group', 'company', 'enterprise'
+        ]
+        
+        for pattern in suspicious_channel_patterns:
+            if pattern in channel_name:
+                self.log_activity(f"🚫 Suspicious channel pattern '{pattern}': {video_data['channel']}")
+                return False
+        
+        # Channel name length check
+        if len(video_data['channel']) < 4:
             self.log_activity(f"🚫 Channel name too short: {video_data['channel']}")
             return False
         
-        if any(char.isdigit() for char in video_data['channel'][:3]):
-            self.log_activity(f"🚫 Channel has numbers: {video_data['channel']}")
+        # Avoid channels with too many numbers (likely auto-generated)
+        if sum(c.isdigit() for c in video_data['channel']) > len(video_data['channel']) * 0.3:
+            self.log_activity(f"🚫 Channel has too many numbers: {video_data['channel']}")
             return False
         
-        # Additional safety checks
+        # Title safety checks
         title_lower = video_data['title'].lower()
         
-        # Block if title suggests it's unavailable content
+        # Block unavailable/problematic content indicators
         unavailable_indicators = [
             'deleted', 'removed', 'unavailable', 'private', 'restricted',
-            'blocked', 'suspended', 'terminated', 'banned'
+            'blocked', 'suspended', 'terminated', 'banned', 'copyright claim',
+            'dmca', 'takedown', 'violation'
         ]
         
         for indicator in unavailable_indicators:
@@ -2774,7 +2811,21 @@ This test confirms that:
                 self.log_activity(f"🚫 Unavailable content indicator: {indicator}")
                 return False
         
-        self.log_activity(f"✅ Safe content: {video_data['title'][:30]}...")
+        # Additional view-based safety (if views data available)
+        if 'views' in video_data:
+            views = video_data['views']
+            # Too many views might indicate viral copyrighted content
+            if views > 50000000:  # 50M+ views - likely copyrighted
+                self.log_activity(f"🚫 Too many views (potential copyright): {views:,}")
+                return False
+            
+            # Too few views might indicate low quality
+            if views < 50000:  # Less than 50K views
+                self.log_activity(f"🚫 Too few views: {views:,}")
+                return False
+        
+        # Safe content approved
+        self.log_activity(f"✅ Safe international content: {video_data['title'][:30]}...")
         return True
 
     
